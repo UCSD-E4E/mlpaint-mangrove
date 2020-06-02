@@ -1,21 +1,26 @@
 package org.djf.mlpaint;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Date;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import org.djf.util.SwingApp;
@@ -28,77 +33,96 @@ import com.google.common.io.MoreFiles;
  * 
  */
 public class MLPaintApp extends SwingApp {
-	
+
 	public static void main(String[] args) {
-		//MAYDO: process startup arguments on the command line
+		//MAYDO: handle startup arguments on the command line
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
-	
-	
-	Path currentImageFile;
+
+	private Path currentImageFile;
 
 	/** magic label paint panel that holds the secret sauce */
-	MLPaintPanel mlp = null;
-	
-	
-	public MLPaintApp() {
+	private MLPaintPanel mlp = null;
+
+	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
+
+
+	private MLPaintApp() {
 		super();
 		setTitle("ML Paint, version 2020.06.02b");// update version number periodically
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run
 		setJMenuBar(makeMenus());
 		addContent();
+		addBehavior();
 		setSize(1000, 800);// initial width, height
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setVisible(true);
-		addBehavior();
 	}
 
 	private void addContent() {
 		// WEST
 		JButton b0 = new JButton("-");
 		JButton b1 = new JButton("+");
-		b0.addActionListener(ev -> status("Ahhhh."));
-		b1.addActionListener(ev -> status("Ahhhh."));
-		
+		b0.addActionListener(ev -> status("Ahhhh. Thanks."));
+		b1.addActionListener(ev -> status("Slap!"));
+
 		JPanel controls = new JPanel(new FlowLayout());
 		controls.add(b1);
 		controls.add(b0);
 		add(controls, BorderLayout.WEST);
-		
+
 		// CENTER
-		JPanel blank = new JPanel();// Initially the middle panel is blank
-		add(blank, BorderLayout.CENTER);
-	}
-	
-	private void addBehavior() {
-		// TODO Auto-generated method stub
+		mlp = new MLPaintPanel();
+		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		add(mlp, BorderLayout.CENTER);
 		
+		// SOUTH
+		add(status, BorderLayout.SOUTH);
+	}
+
+	private void addBehavior() {
+		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
+		showClassifier.addActionListener(ev -> {
+			if (mlp != null) {
+				mlp.setShowClassifierOutput(showClassifier.isSelected());
+			}
+		});
+
 	}
 
 
 	private JMenuBar makeMenus() {
-		JMenu file = new JMenu("File");
-		file.add(newMenuItem("Open image...", this::openImage));
-		file.add(newMenuItem("Save labels...", this::saveLabels));
-		file.add(newMenuItem("Exit", this::exit));
-		
-		JMenu view = new JMenu("View");
-		
-		JMenu label = new JMenu("Label");
-		label.add(newMenuItem("Label + positive", this::label));
-		label.add(newMenuItem("Label - negative", this::label));
-		label.add(newMenuItem("Delete labeled area", this::label));
-		label.add(newMenuItem("Clear fresh paint", this::label));
+		JMenu file = newMenu("File",
+				newMenuItem("Open image...|control O", this::openImage),
+				newMenuItem("Save labels...|control S", this::saveLabels),
+				newMenuItem("Exit", this::exit),
+				null);
+
+		JMenu view = newMenu("View",
+				showClassifier,
+				newMenuItem("Reset zoom|ESCAPE", (name,ev) -> mlp.resetView()),
+				newMenuItem("Refresh", (name,ev) -> refresh()),
+				null);
+
+		JMenu label = newMenu("Label",
+				newMenuItem("Label proposed as positive +|control 1", this::label),
+				newMenuItem("Label proposed as negative -|control 2", this::label),
+				newMenuItem("Label proposed as unlabeled|control 0", this::label),
+				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaint()),
+				newMenuItem("Bigger brush|UP", (name,ev) -> mlp.brushRadius *= 1.2),
+				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.2),
+				newMenuItem("Reset brush size", (name,ev) -> mlp.brushRadius = 10),
+				null);
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
-		rr.add(label);
 		rr.add(view);
+		rr.add(label);
 		return rr;
 	}
-	
-	protected void openImage(String command, ActionEvent ev) throws IOException {
+
+	private void openImage(String command, ActionEvent ev) throws IOException {
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Open images...");
 		jfc.setCurrentDirectory(directory.toFile());
@@ -109,21 +133,21 @@ public class MLPaintApp extends SwingApp {
 		}
 		directory = jfc.getCurrentDirectory().toPath();
 		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
-		
+
 
 		// TODO: if image too big to load:
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
 		// 3. Load downsampled images for all the layers
 		// 4. When saving, upsample the _labels.png
-		
+
 		BufferedImage image = null;
 		BufferedImage labels = null;
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
 			BufferedImage img = ImageIO.read(file);
-			t = reportTime(t, "loaded %s", file);
+			t = reportTime(t, "loaded %s", file.toPath());
 			if (file.toString().contains("_RGB")) {
 				image = img;
 				currentImageFile = file.toPath();
@@ -134,34 +158,43 @@ public class MLPaintApp extends SwingApp {
 			}
 		}
 		if (image == null) {
-			throw new IllegalArgumentException("Must provide the _RGB image");
+			throw new IllegalArgumentException("Must provide the _RGB image");// appears in status bar in red
 		}
 		// if no previously existing labels loaded, create an unlabeled layer of same size.  Initially all 0's == UNLABELED
 		if (labels == null) {
 			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with 4 or 16 colors));
+			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with just 4 or 16 colors));
 		}
-		
-		mlp = new MLPaintPanel(image, labels, extraLayers);
-		add(mlp, BorderLayout.CENTER);// replace the center
-		revalidate();
+
+		// My original design REPLACED the mlp, but it was forever not re-painting.
+		// Instead, I'll just change it's data.
+		showClassifier.setSelected(false);
+		mlp.resetData(image, labels, extraLayers);
+		mlp.revalidate();// https://docs.oracle.com/javase/8/docs/api/javax/swing/JComponent.html#revalidate--
+		status("Opened %s", currentImageFile);
 	}
 
-	protected void saveLabels(String command, ActionEvent ev) throws IOException {
+	private void saveLabels(String command, ActionEvent ev) throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels");
-		File outputfile = directory.resolve(filename).toFile();
-	    ImageIO.write(mlp.labels, "png", outputfile);
+		// For now: compressed PNG is good
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + ".png";
+		Path outfile = directory.resolve(filename);
+		ImageIO.write(mlp.labels, "png", outfile.toFile());
+		status("Saved %d x %d labels to %s", mlp.width, mlp.height, outfile);
 	}
-	
-	protected void exit(String command, ActionEvent ev) {
+
+	private void exit(String command, ActionEvent ev) {
 		//TODO: if latest changes not saved
 		// JOptionDialog "Do you want to save your labels first?
 		// save or just quit
+		status("TODO %s\n", command);
 	}
-	
-	protected void label(String command, ActionEvent ev) {
+
+	private void label(String command, ActionEvent ev) {
+		//TODO 
+		// Using mlp.proposed somehow
+		status("TODO %s\n", command);
 	}
-	
-	
+
+
 }

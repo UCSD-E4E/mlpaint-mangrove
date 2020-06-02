@@ -10,10 +10,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.prefs.Preferences;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenuBar;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 import com.google.common.collect.Lists;
@@ -26,16 +29,28 @@ public class SwingApp extends JFrame {
 	public interface ActionListener2  {
 		void actionPerformed(String command, ActionEvent ev) throws Exception;
 	}
+
+
 	
 	
-	
+	/** shared status bar */
+	public static JLabel status = new JLabel();
+
+
 	/** current directory */
 	public static Path directory = Paths.get(".");
 
 
-	/** status bar */
-	protected static JLabel status = new JLabel();
-	
+	public static ArrayList<Runnable> refreshCallbacks = Lists.newArrayList();
+
+	/** run all the refresh callbacks */
+	public void refresh() {
+		refreshCallbacks.forEach(cb -> cb.run());
+		repaint();
+	}
+
+
+
 	/** set the status bar with a printf message in normal black ink, and echo to output */
 	public static void status(String printf, Object... args) {
 		String msg = args.length == 0 ? printf : String.format(printf, args);
@@ -49,6 +64,16 @@ public class SwingApp extends JFrame {
 		status(printf, args);
 		status.setForeground(Color.RED);
 	}
+	
+	public static long reportTime(long previous, String printf, Object... args) {
+		long now = System.currentTimeMillis();
+		String msg2 = String.format(printf, args);
+		String msg1 = String.format("%,d ms   %s", now - previous, msg2);
+		status(msg1);
+		return now;
+	}
+	
+
 	
 	/** Run later in JavaFx thread, reporting any exceptions via statusRed() & printStackTrace().
 	 * Returns a CompletableFuture that includes timing information.
@@ -92,36 +117,56 @@ public class SwingApp extends JFrame {
 
 
 	
-	protected ArrayList<Runnable> refreshCallbacks = Lists.newArrayList();
-
-	/** run all the refresh callbacks */
-	public void refresh() {
-		refreshCallbacks.forEach(cb -> cb.run());
+	/** new named menu, containing all the menu items, dropping any nulls */
+	public static JMenu newMenu(String name, JMenuItem... items) {
+		JMenu rr = new JMenu(name);
+		for (JMenuItem item: items) {
+			if (item != null) {
+				rr.add(item);
+			}
+		}
+		return rr;
 	}
 
-	protected JMenuItem newMenuItem(String command, ActionListener2 fn) {
-		JMenuItem rr = new JMenuItem(command);
-		rr.addActionListener(ev -> {
-			try {
-				fn.actionPerformed(command, ev);
-			} catch (Exception ex) {
-				statusRed(ex.getMessage());
-				ex.printStackTrace();
-			}
-		});
+	/** new menu item for named command */
+	public static JMenuItem newMenuItem(String command, ActionListener2 action) {
+		return new JMenuItem(newAction(command, action));
+	}
+	
+	/** new named menu item, with the provided action function
+	 * If command string ends with "|alt D" establish keyboard shortcut.
+	 * <pre>
+	 *     <modifiers>* (<typedID> | <pressedReleasedID>)
+	 *     modifiers := shift | control | ctrl | meta | alt | altGraph
+	 *     typedID := typed <typedKey>
+	 *     typedKey := string of length 1 giving Unicode character.
+	 *     pressedReleasedID := (pressed | released) key
+	 *     key := KeyEvent key code name, i.e. the name following "VK_". 
+	 */
+	public static AbstractAction newAction(String command, ActionListener2 action) {
+		String name = Utils.before(command, "|");
+		String shortcut = Utils.after(command, "|");
+		AbstractAction rr = new AbstractAction(name) {
+            public void actionPerformed(ActionEvent ev) {
+                if (action==null) return;
+    			try {
+    				action.actionPerformed(command, ev);
+    			} catch (Exception ex) {
+    				statusRed(ex.getMessage());
+    				ex.printStackTrace();
+    			}
+            }
+        };
+        if (!shortcut.isEmpty()) {
+        	rr.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(shortcut));
+		}
 		return rr;
 	}
 
 	
-	public static long reportTime(long previous, String printf, Object... args) {
-		long now = System.currentTimeMillis();
-		status("%,d ms for " + printf, now - previous, args);
-		return now;
-	}
 	
 	
-	
-	protected void restoreDirectory(Class<?> clazz) {
+	public static void restoreDirectory(Class<?> clazz) {
 		Preferences prefs = Preferences.userNodeForPackage(clazz);
 		Path path = Paths.get(prefs.get("directory", ""));
 		if (Files.isDirectory(path)) {// only set if directory currently exists (otherwise fails silently)
@@ -130,7 +175,7 @@ public class SwingApp extends JFrame {
 	}
 	
 	/** store the current directory for next time we run the program */
-	protected void storeDirectory(Class<?> clazz) {
+	public static void storeDirectory(Class<?> clazz) {
 		Preferences prefs = Preferences.userNodeForPackage(clazz);
         prefs.put("directory", directory.toFile().getAbsolutePath());
 	}
