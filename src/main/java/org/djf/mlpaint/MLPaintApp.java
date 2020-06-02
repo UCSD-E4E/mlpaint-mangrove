@@ -144,6 +144,7 @@ public class MLPaintApp extends SwingApp {
 		
 		mlp = new MLPaintPanel(image, labels, extraLayers);
 		add(mlp, BorderLayout.CENTER);// replace the center
+		revalidate();
 	}
 
 	protected void saveLabels(String command, ActionEvent ev) throws IOException {
