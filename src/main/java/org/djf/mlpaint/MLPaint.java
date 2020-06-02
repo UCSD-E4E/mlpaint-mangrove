@@ -143,14 +143,5 @@ public class MLPaint extends SwingApp {
 	protected void label(String command, ActionEvent ev) {
 	}
 	
-	protected void open(String command, ActionEvent ev) {
-	}
-	
-	protected void open(String command, ActionEvent ev) {
-	}
-	
-	protected void open(String command, ActionEvent ev) {
-	}
-	
 	
 }
