@@ -1,6 +1,6 @@
 package org.djf.mlpaint;
 
-/** A single point in the Dijkstra algorithm.
+/** A single point for the priority queue in the Dijkstra algorithm.
  * 
  * Compares so total fuel is minimized.
  */
