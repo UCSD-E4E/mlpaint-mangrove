@@ -2,24 +2,22 @@ package org.djf.mlpaint;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Date;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
@@ -52,22 +50,24 @@ public class MLPaintApp extends SwingApp {
 		super();
 		setTitle("ML Paint, version 2020.06.02b");// update version number periodically
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run
+		makeContent();
+		makeBehavior();
 		setJMenuBar(makeMenus());
-		addContent();
-		addBehavior();
 		setSize(1000, 800);// initial width, height
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setVisible(true);
 	}
 
-	private void addContent() {
+	private void makeContent() {
+		// NORTH- nothing
+		
 		// WEST
 		JButton b0 = new JButton("-");
 		JButton b1 = new JButton("+");
 		b0.addActionListener(ev -> status("Ahhhh. Thanks."));
 		b1.addActionListener(ev -> status("Slap!"));
 
-		JPanel controls = new JPanel(new FlowLayout());
+		Box controls = Box.createVerticalBox();
 		controls.add(b1);
 		controls.add(b0);
 		add(controls, BorderLayout.WEST);
@@ -77,11 +77,13 @@ public class MLPaintApp extends SwingApp {
 		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		add(mlp, BorderLayout.CENTER);
 		
+		// EAST- nothing
+		
 		// SOUTH
 		add(status, BorderLayout.SOUTH);
 	}
 
-	private void addBehavior() {
+	private void makeBehavior() {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
 		showClassifier.addActionListener(ev -> {
 			if (mlp != null) {
@@ -90,7 +92,6 @@ public class MLPaintApp extends SwingApp {
 		});
 
 	}
-
 
 	private JMenuBar makeMenus() {
 		JMenu file = newMenu("File",
@@ -110,10 +111,12 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Label proposed as negative -|control 2", this::label),
 				newMenuItem("Label proposed as unlabeled|control 0", this::label),
 				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaint()),
-				newMenuItem("Bigger brush|UP", (name,ev) -> mlp.brushRadius *= 1.2),
-				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.2),
-				newMenuItem("Reset brush size", (name,ev) -> mlp.brushRadius = 10),
+				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.brushRadius *= 1.5),
+				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.5),
+				newMenuItem("Reset brush size",   (name,ev) -> mlp.brushRadius = 10),
 				null);
+		// PAGE_UP/PAGE_DOWN keys
+		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
