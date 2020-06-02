@@ -3,44 +3,91 @@ package org.djf.util;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.SwingUtilities;
 
 import com.google.common.collect.Lists;
 
 
 /** Swing base class utilities, with status bar */
 public class SwingApp extends JFrame {
-	
-	
-	public interface ActionListener2 extends ActionListener {
-		@Override
-		default void actionPerformed(ActionEvent e) {
-			// TODO Auto-generated method stub
-			
-		}
+
+	/** An ActionListener that allows throwing an Exception --> statusRed(msg); */
+	public interface ActionListener2  {
+		void actionPerformed(String command, ActionEvent ev) throws Exception;
 	}
+	
+	
+	
+	/** current directory */
+	public static Path directory = Paths.get(".");
 	
 
 	/** status bar */
-	protected JLabel status = new JLabel();
+	protected static JLabel status = new JLabel();
 	
-	/** set the status bar with a printf message, and echo to output */
-	public void status(String printf, Object... args) {
+	/** set the status bar with a printf message in normal black ink, and echo to output */
+	public static void status(String printf, Object... args) {
 		String msg = args.length == 0 ? printf : String.format(printf, args);
 		status.setText(msg);
 		status.setForeground(Color.BLACK);
 		System.out.println(msg);
 	}
 
-	/** set the status bar with a printf message, and echo to output */
-	public void statusRed() {
+	/** set the status bar & make it red */
+	public static void statusRed(String printf, Object... args) {
+		status(printf, args);
 		status.setForeground(Color.RED);
 	}
 	
+	/** Run later in JavaFx thread, reporting any exceptions via statusRed() & printStackTrace().
+	 * Returns a CompletableFuture that includes timing information.
+	 */
+	public static void runForeground(Callable<?> runInGuiThread) {
+		SwingUtilities.invokeLater(() -> {
+	        try {
+	            runInGuiThread.call();
+	        } catch (Throwable ex) {
+	            ex.printStackTrace();
+	            statusRed(ex.getMessage());
+			}
+		});
+	}
+
+	public static void runForeground(Runnable runInGuiThread) {
+		runForeground(() -> {
+			runInGuiThread.run();
+			return null;
+		});
+	}
+
+	/** Run in background thread (not Swing thread), reporting any exceptions via statusRed() & printStackTrace().
+	 * Returns a CompletableFuture that includes timing information.
+	 * Also enqueues in U.bgTasks, should you want to U.bgWait() for all to finish, without keeping your own pointer.
+	 */
+	public static <T> CompletableFuture<T> runBackground(Callable<T> runInBackgroundThread) {
+		CompletableFuture<T> future = new CompletableFuture<T>();
+		CompletableFuture.runAsync(() -> {
+	        try {
+	            T result = runInBackgroundThread.call();
+				future.complete(result);
+	        } catch (Throwable ex) {
+	        	ex.printStackTrace();
+	        	statusRed(ex.getMessage());
+	            future.completeExceptionally(ex);
+			}
+		});
+		return future;
+	}
+
 
 	
 	protected ArrayList<Runnable> refreshCallbacks = Lists.newArrayList();
@@ -50,10 +97,23 @@ public class SwingApp extends JFrame {
 		refreshCallbacks.forEach(cb -> cb.run());
 	}
 
-	protected JMenuItem newMenuItem(String name, ActionListener fn) {
-		JMenuItem rr = new JMenuItem(name);
-		rr.addActionListener(fn);
+	protected JMenuItem newMenuItem(String command, ActionListener2 fn) {
+		JMenuItem rr = new JMenuItem(command);
+		rr.addActionListener(ev -> {
+			try {
+				fn.actionPerformed(command, ev);
+			} catch (Exception ex) {
+				statusRed(ex.getMessage());
+				ex.printStackTrace();
+			}
+		});
 		return rr;
 	}
 
+	
+	public static long reportTime(long previous, String printf, Object... args) {
+		long now = System.currentTimeMillis();
+		status("%,d ms for " + printf, now - previous, args);
+		return now;
+	}
 }
