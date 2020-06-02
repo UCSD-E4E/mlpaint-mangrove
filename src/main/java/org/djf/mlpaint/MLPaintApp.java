@@ -129,6 +129,11 @@ public class MLPaintApp extends SwingApp {
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Open images...");
 		jfc.setCurrentDirectory(directory.toFile());
+		
+		// currently the user selects all the layers to load
+		// MAYDO: instead, the user could just select the main file, 
+		// and we could auto-identify the others somehow; (optionally offering to the user to filter away some
+		// that they don't want to spent time/RAM/network loading)
 		jfc.setMultiSelectionEnabled(true);
 		int rr = jfc.showOpenDialog(this);
 		if (rr != JFileChooser.APPROVE_OPTION) {
@@ -142,7 +147,7 @@ public class MLPaintApp extends SwingApp {
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
 		// 3. Load downsampled images for all the layers
-		// 4. When saving, upsample the _labels.png
+		// 4. When saving to _labels.png, remember to upsample the result 
 
 		BufferedImage image = null;
 		BufferedImage labels = null;
