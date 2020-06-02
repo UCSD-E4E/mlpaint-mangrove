@@ -2,7 +2,6 @@ package org.djf.util;
 
 import java.awt.Color;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -13,6 +12,7 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
@@ -31,7 +31,7 @@ public class SwingApp extends JFrame {
 	
 	/** current directory */
 	public static Path directory = Paths.get(".");
-	
+
 
 	/** status bar */
 	protected static JLabel status = new JLabel();
@@ -121,7 +121,7 @@ public class SwingApp extends JFrame {
 	
 	
 	
-	protected void restoreDirectory(Class clazz) {
+	protected void restoreDirectory(Class<?> clazz) {
 		Preferences prefs = Preferences.userNodeForPackage(clazz);
 		Path path = Paths.get(prefs.get("directory", ""));
 		if (Files.isDirectory(path)) {// only set if directory currently exists (otherwise fails silently)
@@ -130,7 +130,7 @@ public class SwingApp extends JFrame {
 	}
 	
 	/** store the current directory for next time we run the program */
-	protected void storeDirectory(Class clazz) {
+	protected void storeDirectory(Class<?> clazz) {
 		Preferences prefs = Preferences.userNodeForPackage(clazz);
         prefs.put("directory", directory.toFile().getAbsolutePath());
 	}
