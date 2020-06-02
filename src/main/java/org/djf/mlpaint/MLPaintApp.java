@@ -11,10 +11,12 @@ import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -40,7 +42,9 @@ public class MLPaintApp extends SwingApp {
 
 	/** magic label paint panel that holds the secret sauce */
 	MLPaintPanel mlp = null;
-	
+
+	JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
+
 	
 	public MLPaintApp() {
 		super();
@@ -73,7 +77,12 @@ public class MLPaintApp extends SwingApp {
 	
 	private void addBehavior() {
 		// TODO Auto-generated method stub
-		
+		showClassifier.addActionListener(ev -> {
+			if (mlp != null) {
+				mlp.setShowClassifierOutput(showClassifier.isSelected());
+			}
+		});
+
 	}
 
 
@@ -84,12 +93,14 @@ public class MLPaintApp extends SwingApp {
 		file.add(newMenuItem("Exit", this::exit));
 		
 		JMenu view = new JMenu("View");
+		view.add(newMenuItem("Reset zoom", (name,ev) -> mlp.resetView()));
+		view.add(showClassifier);
 		
 		JMenu label = new JMenu("Label");
 		label.add(newMenuItem("Label + positive", this::label));
 		label.add(newMenuItem("Label - negative", this::label));
 		label.add(newMenuItem("Delete labeled area", this::label));
-		label.add(newMenuItem("Clear fresh paint", this::label));
+		label.add(newMenuItem("Clear fresh paint", (name,ev) -> mlp.clearFreshPaint()));
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
@@ -123,7 +134,7 @@ public class MLPaintApp extends SwingApp {
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
 			BufferedImage img = ImageIO.read(file);
-			t = reportTime(t, "loaded %s", file);
+			t = reportTime(t, "loaded %s", file.toPath());
 			if (file.toString().contains("_RGB")) {
 				image = img;
 				currentImageFile = file.toPath();
@@ -142,7 +153,11 @@ public class MLPaintApp extends SwingApp {
 			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with 4 or 16 colors));
 		}
 		
+		if (mlp != null) {
+			remove(mlp);// remove the old MLP first
+		}
 		mlp = new MLPaintPanel(image, labels, extraLayers);
+		showClassifier.setSelected(false);
 		add(mlp, BorderLayout.CENTER);// replace the center
 		revalidate();
 	}

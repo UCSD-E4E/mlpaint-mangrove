@@ -26,6 +26,9 @@ public class SwingApp extends JFrame {
 	public interface ActionListener2  {
 		void actionPerformed(String command, ActionEvent ev) throws Exception;
 	}
+
+
+	
 	
 	
 	
@@ -115,7 +118,9 @@ public class SwingApp extends JFrame {
 	
 	public static long reportTime(long previous, String printf, Object... args) {
 		long now = System.currentTimeMillis();
-		status("%,d ms for " + printf, now - previous, args);
+		String msg2 = String.format(printf, args);
+		String msg1 = String.format("%,d ms for %s", now - previous, msg2);
+		status(msg1);
 		return now;
 	}
 	

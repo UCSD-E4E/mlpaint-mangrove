@@ -1,7 +1,9 @@
 package org.djf.util;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -12,10 +14,41 @@ import javax.imageio.ImageReader;
 import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.stream.ImageInputStream;
 
-/** Utility functions.
+import com.google.common.base.Preconditions;
+
+/** Swing Utilities.
  * 
  */
-public class Util {
+public class SwingUtil {
+	
+
+	public static final Color TRANSPARENT = new Color(0,0,0,0f);
+	public static final Color ALPHARED    = new Color(1,0,0,.2f);
+	public static final Color ALPHAGREEN = new Color(0,1,0,.2f);
+	public static final Color ALPHABLUE  = new Color(0,1,0,.2f);
+
+	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
+	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {
+		Preconditions.checkArgument(colors.length <= 16, "Colors.length must be <= 16");
+		int bitsPerPixel = 
+				colors.length <= 2 ? 1 :
+			    colors.length <= 4 ? 2 :
+			    	4;
+		int size = 1 << bitsPerPixel;
+		byte[] r = new byte[size];
+		byte[] g = new byte[size];
+		byte[] b = new byte[size];
+		byte[] a = new byte[size];
+		for (int i = 0; i < colors.length; i++) {
+			r[i] = (byte) colors[i].getRed();
+			g[i] = (byte) colors[i].getGreen();
+			b[i] = (byte) colors[i].getBlue();
+			a[i] = (byte) colors[i].getAlpha();
+		}
+		IndexColorModel icm = new IndexColorModel(bitsPerPixel, size, r, g, b, a);
+		return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY, icm);
+	}
+
 
 
 	public static Dimension readImageDimensions(File imageFile) throws IOException {
