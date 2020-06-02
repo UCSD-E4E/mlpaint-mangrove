@@ -12,7 +12,7 @@ import java.util.prefs.Preferences;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenuBar;
+import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
@@ -26,6 +26,9 @@ public class SwingApp extends JFrame {
 	public interface ActionListener2  {
 		void actionPerformed(String command, ActionEvent ev) throws Exception;
 	}
+
+
+	
 	
 	
 	
@@ -99,6 +102,20 @@ public class SwingApp extends JFrame {
 		refreshCallbacks.forEach(cb -> cb.run());
 	}
 
+	/** new named menu, containing all the menu items, dropping any nulls */
+	protected JMenu newMenu(String name, JMenuItem... items) {
+		JMenu rr = new JMenu(name);
+		for (JMenuItem item: items) {
+			if (item != null) {
+				rr.add(item);
+			}
+		}
+		return rr;
+	}
+
+	/** new named menu item, with the provided action function
+	 * MAYDO: if command string ends with "|alt D" establish keyboard shortcut. 
+	 */
 	protected JMenuItem newMenuItem(String command, ActionListener2 fn) {
 		JMenuItem rr = new JMenuItem(command);
 		rr.addActionListener(ev -> {
@@ -115,7 +132,9 @@ public class SwingApp extends JFrame {
 	
 	public static long reportTime(long previous, String printf, Object... args) {
 		long now = System.currentTimeMillis();
-		status("%,d ms for " + printf, now - previous, args);
+		String msg2 = String.format(printf, args);
+		String msg1 = String.format("%,d ms for %s", now - previous, msg2);
+		status(msg1);
 		return now;
 	}
 	
