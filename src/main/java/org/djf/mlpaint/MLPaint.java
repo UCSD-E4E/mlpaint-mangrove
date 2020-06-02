@@ -57,7 +57,7 @@ public class MLPaint extends SwingApp {
 	BufferedImage labels;
 	
 	/** input layers:  filename & image.  Does not contain master image or labels layers. */
-	LinkedHashMap<String, BufferedImage> extraLayers;
+	LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();
 
 	
 	
@@ -99,9 +99,9 @@ public class MLPaint extends SwingApp {
 		JMenu view = new JMenu("View");
 		
 		JMenu label = new JMenu("Label");
-		file.add(newMenuItem("Label positive", this::label));
-		file.add(newMenuItem("Label negative", this::label));
-		file.add(newMenuItem("Delete labeled area", this::label));
+		label.add(newMenuItem("Label positive", this::label));
+		label.add(newMenuItem("Label negative", this::label));
+		label.add(newMenuItem("Delete labeled area", this::label));
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
