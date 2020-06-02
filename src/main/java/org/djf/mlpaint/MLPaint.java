@@ -80,8 +80,8 @@ public class MLPaint extends SwingApp {
 		add(b, BorderLayout.WEST);
 		
 		// CENTER
-		JComponent imageViewer = null;//todo
-		add(imageViewer, BorderLayout.CENTER);
+		//JComponent imageViewer = null;//todo
+		//add(imageViewer, BorderLayout.CENTER);
 	}
 	
 	private void addBehavior() {
