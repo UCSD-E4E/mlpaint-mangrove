@@ -376,6 +376,7 @@ public class MLPaintPanel extends JComponent
 	}
 	
 	private double[] getFeatureVector(int x, int y) {
+		//MAYDO: iff this gets to be the CPU bottleneck, then we could cache answers
 		Color clr = new Color(image.getRGB(x, y));
         int red =   clr.getRed();
         int green = clr.getGreen();
