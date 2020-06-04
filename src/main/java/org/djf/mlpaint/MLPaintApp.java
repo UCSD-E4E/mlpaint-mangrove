@@ -1,15 +1,18 @@
 package org.djf.mlpaint;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Date;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFileChooser;
@@ -30,14 +33,14 @@ import com.google.common.io.MoreFiles;
  * 
  */
 public class MLPaintApp extends SwingApp {
-	
+
 	public static void main(String[] args) {
 		//MAYDO: process startup arguments on the command line
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
-	
-	
+
+
 	Path currentImageFile;
 
 	/** magic label paint panel that holds the secret sauce */
@@ -45,7 +48,7 @@ public class MLPaintApp extends SwingApp {
 
 	JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
-	
+
 	public MLPaintApp() {
 		super();
 		setTitle("ML Paint, version 2020.06.02b");// update version number periodically
@@ -64,17 +67,17 @@ public class MLPaintApp extends SwingApp {
 		JButton b1 = new JButton("+");
 		b0.addActionListener(ev -> status("Ahhhh."));
 		b1.addActionListener(ev -> status("Ahhhh."));
-		
+
 		JPanel controls = new JPanel(new FlowLayout());
 		controls.add(b1);
 		controls.add(b0);
 		add(controls, BorderLayout.WEST);
-		
+
 		// CENTER
 		JPanel blank = new JPanel();// Initially the middle panel is blank
 		add(blank, BorderLayout.CENTER);
 	}
-	
+
 	private void addBehavior() {
 		// TODO Auto-generated method stub
 		showClassifier.addActionListener(ev -> {
@@ -87,20 +90,31 @@ public class MLPaintApp extends SwingApp {
 
 
 	private JMenuBar makeMenus() {
-		JMenu file = new JMenu("File");
-		file.add(newMenuItem("Open image...", this::openImage));
-		file.add(newMenuItem("Save labels...", this::saveLabels));
-		file.add(newMenuItem("Exit", this::exit));
-		
-		JMenu view = new JMenu("View");
-		view.add(newMenuItem("Reset zoom", (name,ev) -> mlp.resetView()));
-		view.add(showClassifier);
-		
-		JMenu label = new JMenu("Label");
-		label.add(newMenuItem("Label + positive", this::label));
-		label.add(newMenuItem("Label - negative", this::label));
-		label.add(newMenuItem("Delete labeled area", this::label));
-		label.add(newMenuItem("Clear fresh paint", (name,ev) -> mlp.clearFreshPaint()));
+		JMenu file = newMenu("File",
+				newMenuItem("Open image...", this::openImage),
+				newMenuItem("Save labels...", this::saveLabels),
+				newMenuItem("Exit", this::exit),
+				null);
+
+		JMenu view = newMenu("View",
+				newMenuItem("Reset zoom", (name,ev) -> mlp.resetView()),
+				showClassifier,
+				newMenuItem("Refresh", (name,ev) -> {
+					repaint();
+					revalidate();
+					System.out.printf("Revalidate %s\n", new Date().toString());
+					if (mlp!=null) {
+						mlp.repaint();
+					}
+				}),
+				null);
+
+		JMenu label = newMenu("Label",
+				newMenuItem("Label proposed as positive +", this::label),
+				newMenuItem("Label proposed as negative -", this::label),
+				newMenuItem("Label proposed as unlabeled", this::label),
+				newMenuItem("Clear proposed", (name,ev) -> mlp.clearFreshPaint()),
+				null);
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
@@ -108,7 +122,7 @@ public class MLPaintApp extends SwingApp {
 		rr.add(view);
 		return rr;
 	}
-	
+
 	protected void openImage(String command, ActionEvent ev) throws IOException {
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Open images...");
@@ -120,14 +134,14 @@ public class MLPaintApp extends SwingApp {
 		}
 		directory = jfc.getCurrentDirectory().toPath();
 		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
-		
+
 
 		// TODO: if image too big to load:
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
 		// 3. Load downsampled images for all the layers
 		// 4. When saving, upsample the _labels.png
-		
+
 		BufferedImage image = null;
 		BufferedImage labels = null;
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
@@ -152,11 +166,12 @@ public class MLPaintApp extends SwingApp {
 			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
 			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with 4 or 16 colors));
 		}
-		
+
 		if (mlp != null) {
 			remove(mlp);// remove the old MLP first
 		}
 		mlp = new MLPaintPanel(image, labels, extraLayers);
+		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		showClassifier.setSelected(false);
 		add(mlp, BorderLayout.CENTER);// replace the center
 		revalidate();
@@ -166,17 +181,17 @@ public class MLPaintApp extends SwingApp {
 		//TODO  figure out exactly how to output for downstream consumption
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels");
 		File outputfile = directory.resolve(filename).toFile();
-	    ImageIO.write(mlp.labels, "png", outputfile);
+		ImageIO.write(mlp.labels, "png", outputfile);
 	}
-	
+
 	protected void exit(String command, ActionEvent ev) {
 		//TODO: if latest changes not saved
 		// JOptionDialog "Do you want to save your labels first?
 		// save or just quit
 	}
-	
+
 	protected void label(String command, ActionEvent ev) {
 	}
-	
-	
+
+
 }

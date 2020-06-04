@@ -1,6 +1,7 @@
 package org.djf.mlpaint;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -16,12 +17,15 @@ import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
+import javax.swing.JComponent;
 import javax.swing.JPanel;
 
 import org.djf.util.SwingApp;
@@ -31,7 +35,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 
-import smile.classification.Classifier;
 import smile.classification.LDA;
 import smile.classification.LogisticRegression;
 import smile.classification.SoftClassifier;
@@ -40,7 +43,7 @@ import smile.classification.SoftClassifier;
 /** Magic Label Paint panel.
  * 
  */
-public class MLPaintPanel extends JPanel 
+public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 	
 	// *label image* pixel index codes
@@ -53,30 +56,29 @@ public class MLPaintPanel extends JPanel
 
 	
 	
-	/** current RGB image (possibly huge) */
+	/** current RGB image (possibly huge) in "world coordinates" */
 	final BufferedImage image;
 	final int width;
 	final int height;
 
+	/** extra image layers:  filename & image.  Does not contain master image or labels layers. 
+	 * Might have computed layers someday. 
+	 */
+	final LinkedHashMap<String, BufferedImage> extraLayers;
+
 	/** matching image labels: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	final BufferedImage labels;
 	
-	/** binary image.  pixel index = FRESHPAINT(1) where the user has freshly painted. 
+	/** binary image mask.  pixel index = FRESHPAINT(1) where the user has freshly painted, else index 0. 
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
 	BufferedImage freshPaint;
 
-	/** pixel size of the brush */
+	/** pixel size of the brush.  TODO: do we want it measured in image space or screen space??  currently image */
 	double brushRadius = 10.0;
 
-	/** Distance to each pixel from fresh paint, initially +infinity.  Not computed for 100% of image (huge?). */
-	double[][] distances;
-	
 
-	/** input layers:  filename & image.  Does not contain master image or labels layers. */
-	final LinkedHashMap<String, BufferedImage> extraLayers;
-	
-	/** map from screen frame of reference down to image frame of reference, so we can pan & zoom */
+	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
 	AffineTransform view = new AffineTransform();
 	
 	/** previous mouse event when drawing/dragging */
@@ -86,22 +88,29 @@ public class MLPaintPanel extends JPanel
 	
 	/** classifier output image, grayscale */
 	BufferedImage classifierOutput;
+
+	/** Distance to each pixel from fresh paint, initially +infinity.  
+	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation. 
+	 */
+	double[][] distances;
 	
+
 
 	public MLPaintPanel(BufferedImage masterImage, BufferedImage labels2,
 			LinkedHashMap<String, BufferedImage> extraLayers2) {
 		image = masterImage;
-		labels = labels2;
-		extraLayers = extraLayers2;
 		width = image.getWidth();
 		height = image.getHeight();
+		labels = labels2;
+		extraLayers = extraLayers2;
 		freshPaint = SwingUtil.newBinaryImage(width, height, SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN);// 1 bit per pixel, 2 colors
 		clearFreshPaint();
 		distances = new double[width][height];
+		setPreferredSize(new Dimension(width, height));
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
-		addKeyListener(this);
+		addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
 		setOpaque(true);
 		setFocusable(true);// allow key events
 	}
@@ -135,8 +144,7 @@ public class MLPaintPanel extends JPanel
 	public void mousePressed(MouseEvent e) {
 		System.out.printf("MousePress %s\n", e.toString());
 		mousePrev = e;
-		if (e.isControlDown()) {
-		} else {// add fresh paint
+		if (e.isControlDown()) {// add fresh paint
 			brushFreshPaint(e);
 		}
 		e.consume();
@@ -159,8 +167,8 @@ public class MLPaintPanel extends JPanel
 			brushFreshPaint(e);
 		}
 		mousePrev = e;
-		repaint();
 		e.consume();
+		repaint();
 	}
 
 	@Override
@@ -173,6 +181,7 @@ public class MLPaintPanel extends JPanel
 			e.consume();
 		}
 		mousePrev = null;
+		repaint();
 	}
 
 	@Override
@@ -205,6 +214,7 @@ public class MLPaintPanel extends JPanel
 		char ch = e.getKeyChar();
 		if (Character.isDigit(ch)) {
 			brushRadius = 5 * (ch - '0' + 1);// somehow tranlate it
+			// show the user too
 		}
 	}
 
@@ -242,8 +252,8 @@ public class MLPaintPanel extends JPanel
 	private void brushFreshPaint(MouseEvent e) {
 		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
 		Ellipse2D brush = new Ellipse2D.Double(
-				e.getPoint().getX() - brushRadius,
-				e.getPoint().getY() - brushRadius,
+				e.getX() - brushRadius, 
+				e.getY() - brushRadius, 
 				2*brushRadius, 2*brushRadius);
 		g.setPaint(Color.WHITE);
 		g.fill(brush);
@@ -253,13 +263,15 @@ public class MLPaintPanel extends JPanel
 
 	@Override
 	protected void paintComponent(Graphics g) {
-		System.out.printf("paint component %,d\n", System.currentTimeMillis());
+		System.out.printf("paintComponent %s\n", new Date().toString());
 		super.paintComponent(g);
+		ThreadLocalRandom rand = ThreadLocalRandom.current();
 		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setColor(getBackground());
-		g2.fillRect(0, 0, getWidth(), getHeight());// backgroun
+		g2.setColor(new Color(rand.nextInt()));
+		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
 		g2.transform(view);
 		g2.drawImage(image, 0, 0, null);
+		g2.fillRect(rand.nextInt(width), rand.nextInt(height), 20,20);
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
 		if (classifierOutput != null) {
 			g2.drawImage(classifierOutput, 0, 0, null);
@@ -338,8 +350,10 @@ public class MLPaintPanel extends JPanel
         int red =   clr.getRed();
         int green = clr.getGreen();
         int blue =   clr.getBlue();
-        // TODO include HSV & other image layers, possibly also computed
-		double[] rr = {red/255.0, green/255.0, blue/255.0};
+        // TODO include other image layers, possibly also computed textures/etc.
+        float[] hsb = new float[3];
+		Color.RGBtoHSB(red, green, blue, hsb);
+		double[] rr = {red/255.0, green/255.0, blue/255.0, hsb[0], hsb[1], hsb[2]};
 		return rr;
 	}
 
@@ -389,8 +403,8 @@ public class MLPaintPanel extends JPanel
 		} else {
 			classifierOutput = null;
 		}
-		repaint();
-		revalidate();
+		repaint(50);
+		//revalidate();
 	}
 
 }
