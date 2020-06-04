@@ -144,7 +144,8 @@ public class MLPaintPanel extends JComponent
 	public void mousePressed(MouseEvent e) {
 		System.out.printf("MousePress %s\n", e.toString());
 		mousePrev = e;
-		if (e.isControlDown()) {// add fresh paint
+		if (e.isControlDown()) {
+		} else {// add fresh paint
 			brushFreshPaint(e);
 		}
 		e.consume();
