@@ -135,7 +135,8 @@ public class MLPaintPanel extends JPanel
 	public void mousePressed(MouseEvent e) {
 		System.out.printf("MousePress %s\n", e.toString());
 		mousePrev = e;
-		if (e.isControlDown()) {// add fresh paint
+		if (e.isControlDown()) {
+		} else {// add fresh paint
 			brushFreshPaint(e);
 		}
 		e.consume();
@@ -241,8 +242,8 @@ public class MLPaintPanel extends JPanel
 	private void brushFreshPaint(MouseEvent e) {
 		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
 		Ellipse2D brush = new Ellipse2D.Double(
-				e.getX() - brushRadius, 
-				e.getY() - brushRadius, 
+				e.getPoint().getX() - brushRadius,
+				e.getPoint().getY() - brushRadius,
 				2*brushRadius, 2*brushRadius);
 		g.setPaint(Color.WHITE);
 		g.fill(brush);
