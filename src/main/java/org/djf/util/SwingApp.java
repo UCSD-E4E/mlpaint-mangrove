@@ -75,7 +75,7 @@ public class SwingApp extends JFrame {
 	
 
 	
-	/** Run later in JavaFx thread, reporting any exceptions via statusRed() & printStackTrace().
+	/** Run later in thread, reporting any exceptions via statusRed() & printStackTrace().
 	 * Returns a CompletableFuture that includes timing information.
 	 */
 	public static void runForeground(Callable<?> runInGuiThread) {

@@ -28,7 +28,7 @@ import com.google.common.io.MoreFiles;
 
 
 /** Magic Label Paint ~ ML Paint
- * 
+ *  	A GUI for assisted labeling, using interactive machine learning suggestions
  */
 public class MLPaintApp extends SwingApp {
 
@@ -45,19 +45,22 @@ public class MLPaintApp extends SwingApp {
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
-
+	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
-		setTitle("ML Paint, version 2020.06.02b");// update version number periodically
-		restoreDirectory(MLPaintApp.class);// remember directory from previous run
-		makeContent();
-		makeBehavior();
-		setJMenuBar(makeMenus());
-		setSize(1000, 800);// initial width, height
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setVisible(true);
+		setTitle("ML Paint, version 2020.06.02b");// update version number periodically   //GROC: where from?
+		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
+		makeContent();												// MLPaintApp method
+		makeBehavior();												// MLPaintApp method
+		setJMenuBar(makeMenus());									//JFrame method
+		setSize(1000, 800);// initial width, height  	//JFrame method
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);				// JFrame method
+		setVisible(true);											// JFrame method
 	}
 
+	/** Make the control panel boxes with actions within the frame.
+	 * So far controls on the west and little else.
+	 */
 	private void makeContent() {
 		// NORTH- nothing
 		
@@ -70,7 +73,7 @@ public class MLPaintApp extends SwingApp {
 		Box controls = Box.createVerticalBox();
 		controls.add(b1);
 		controls.add(b0);
-		add(controls, BorderLayout.WEST);
+		add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
 
 		// CENTER
 		mlp = new MLPaintPanel();
@@ -80,9 +83,10 @@ public class MLPaintApp extends SwingApp {
 		// EAST- nothing
 		
 		// SOUTH
-		add(status, BorderLayout.SOUTH);
+		add(status, BorderLayout.SOUTH);							// GROC: Where do we get status?
 	}
 
+	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
 	private void makeBehavior() {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
 		showClassifier.addActionListener(ev -> {
@@ -93,7 +97,10 @@ public class MLPaintApp extends SwingApp {
 
 	}
 
-	private JMenuBar makeMenus() {
+	/** Make the menus, with associated actions and often keyboard shortcuts.
+	 * @return JMenuBar
+	 */
+	private JMenuBar makeMenus() {				 						//MAYDO: Allow ctrl and command, maybe ever same
 		JMenu file = newMenu("File",
 				newMenuItem("Open image...|control O", this::openImage),
 				newMenuItem("Save labels...|control S", this::saveLabels),
@@ -125,6 +132,8 @@ public class MLPaintApp extends SwingApp {
 		return rr;
 	}
 
+	/*The rest of the file serves makeMenus(), providing action functions called there.*/
+
 	private void openImage(String command, ActionEvent ev) throws IOException {
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Open images...");
@@ -139,8 +148,8 @@ public class MLPaintApp extends SwingApp {
 		if (rr != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
-		directory = jfc.getCurrentDirectory().toPath();
-		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
+		directory = jfc.getCurrentDirectory().toPath();						//GROC: directory sourcing
+		storeDirectory(MLPaintApp.class);// remember it for future runs of the program		//GROC: SwingApp, same Q about prefs.
 
 
 		// TODO: if image too big to load:
@@ -173,9 +182,12 @@ public class MLPaintApp extends SwingApp {
 			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
 			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with just 4 or 16 colors));
 		}
+		if (image.getWidth() != labels.getWidth() || image.getHeight() != labels.getHeight()) {  //GROC: Is this a fine idea?
+			throw new IOException("The loaded labels ought to be the same shape as the image.");
+		}
 
 		// My original design REPLACED the mlp, but it was forever not re-painting.
-		// Instead, I'll just change it's data.
+		// Instead, I'll just change its data.
 		showClassifier.setSelected(false);
 		mlp.resetData(image, labels, extraLayers);
 		mlp.revalidate();// https://docs.oracle.com/javase/8/docs/api/javax/swing/JComponent.html#revalidate--
