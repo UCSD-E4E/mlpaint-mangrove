@@ -89,7 +89,7 @@ public class MLPaintPanel extends JComponent
 	private double[][] distances;
 	
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
-	public BufferedImage proposed;
+	public BufferedImage proposed; //GROK: why grayed out?
 
 
 	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
@@ -100,7 +100,7 @@ public class MLPaintPanel extends JComponent
 	
 
 	
-	public MLPaintPanel() {
+	public MLPaintPanel() {   //GROK: the naming of this method--oughtn't it to be public static void main?
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
@@ -136,7 +136,7 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
-	public void clearFreshPaint() {
+	public void clearFreshPaint() {  //GROK: Does this change fp itself
 		WritableRaster rawdata = freshPaint.getRaster();
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
@@ -185,7 +185,7 @@ public class MLPaintPanel extends JComponent
 		}
 		mousePrev = e;
 		e.consume();
-		repaint();
+		repaint();            					//GROK: How is a new view affine transform going to affect the repaint?
 	}
 
 	@Override
@@ -195,7 +195,7 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() && !e.isAltDown()) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
-			runDijkstra();
+			runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 		}
 		mousePrev = null;
 		repaint();
@@ -231,7 +231,7 @@ public class MLPaintPanel extends JComponent
 		System.out.printf("KeyTyped %s\n", e);// repeats if held, for normal typing, not function keys
 		char ch = e.getKeyChar();
 		if (Character.isDigit(ch)) {
-			brushRadius = 5 * (ch - '0' + 1);// somehow tranlate it
+			brushRadius = 5 * (ch - '0' + 1);// somehow translate it
 			// show the user too
 			System.out.printf("paintbrush radius: %s\n", brushRadius);
 		}
@@ -250,7 +250,7 @@ public class MLPaintPanel extends JComponent
 			// zooms at mouse point
 			view.preConcatenate(AffineTransform.getTranslateInstance(-x, -y));
 			view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
-			view.preConcatenate(AffineTransform.getTranslateInstance(x, y));
+			view.preConcatenate(AffineTransform.getTranslateInstance(x, y)); //GROK: should this (x,y) be scaled?
 			
 		} else if (e.isShiftDown()) {// shift adjusts brush radius
 			brushRadius *= scale;
@@ -288,6 +288,10 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
+	/**GROC: ?Paints the image, freshpaint, and possibly classifier output, to the screen.
+	 *
+	 * @param g
+	 */
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
