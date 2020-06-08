@@ -14,19 +14,18 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
-import javax.swing.JPanel;
 
 import org.djf.util.SwingApp;
 import org.djf.util.SwingUtil;
@@ -35,7 +34,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Streams;
 
-import smile.classification.LDA;
 import smile.classification.LogisticRegression;
 import smile.classification.SoftClassifier;
 
@@ -46,75 +44,87 @@ import smile.classification.SoftClassifier;
 public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 	
-	// *label image* pixel index codes
+	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
 	public static final int UNLABELED = 0;
 	public static final int POSITIVE = 1;
 	public static final int NEGATIVE = 2;
-
-	// *freshPaint* pixel index codes (it's just a binary image):  
-	public static final int FRESHPAINT = 1;
-
+	// possibly up to 255 different labels, as needed
+	
+	// *freshPaint* pixel index codes (0 to 3 maximum)
+	private static final int FRESH_UNLABELED = 0;
+	private static final int FRESH_POS = 1;
+	private static final int FRESH_NEG = 2; 
+	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
 	
 	
 	/** current RGB image (possibly huge) in "world coordinates" */
-	final BufferedImage image;
-	final int width;
-	final int height;
+	public BufferedImage image;
+	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
+	int width, height;
 
 	/** extra image layers:  filename & image.  Does not contain master image or labels layers. 
 	 * Might have computed layers someday. 
 	 */
-	final LinkedHashMap<String, BufferedImage> extraLayers;
+	public LinkedHashMap<String, BufferedImage> extraLayers;
 
 	/** matching image labels: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
-	final BufferedImage labels;
+	public BufferedImage labels;
 	
-	/** binary image mask.  pixel index = FRESHPAINT(1) where the user has freshly painted, else index 0. 
+	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive. 
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
-	BufferedImage freshPaint;
+	private BufferedImage freshPaint;
 
-	/** pixel size of the brush.  TODO: do we want it measured in image space or screen space??  currently image */
-	double brushRadius = 10.0;
+	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
+	public double brushRadius = 10.0;
 
-
-	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
-	AffineTransform view = new AffineTransform();
-	
-	/** previous mouse event when drawing/dragging */
-	private MouseEvent mousePrev;
-	
-	SoftClassifier<double[]> classifier;
+	private SoftClassifier<double[]> classifier;
 	
 	/** classifier output image, grayscale */
-	BufferedImage classifierOutput;
+	private BufferedImage classifierOutput;
 
 	/** Distance to each pixel from fresh paint, initially +infinity.  
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation. 
 	 */
-	double[][] distances;
+	private double[][] distances;
+	
+	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
+	public BufferedImage proposed;
+
+
+	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
+	private AffineTransform view = new AffineTransform();
+	
+	/** previous mouse event when drawing/dragging */
+	private MouseEvent mousePrev;
 	
 
+	
+	public MLPaintPanel() {
+		addMouseListener(this);
+		addMouseMotionListener(this);
+		addMouseWheelListener(this);
+		//addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
+		setOpaque(true);
+		setFocusable(true);// allow key events
+	}
 
-	public MLPaintPanel(BufferedImage masterImage, BufferedImage labels2,
+	public void resetData(BufferedImage masterImage, BufferedImage labels2,
 			LinkedHashMap<String, BufferedImage> extraLayers2) {
 		image = masterImage;
 		width = image.getWidth();
 		height = image.getHeight();
 		labels = labels2;
 		extraLayers = extraLayers2;
-		freshPaint = SwingUtil.newBinaryImage(width, height, SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN);// 1 bit per pixel, 2 colors
-		clearFreshPaint();
 		distances = new double[width][height];
+		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
+		clearFreshPaint();
+		classifier = null;
+		classifierOutput = null;
 		setPreferredSize(new Dimension(width, height));
-		addMouseListener(this);
-		addMouseMotionListener(this);
-		addMouseWheelListener(this);
-		addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
-		setOpaque(true);
-		setFocusable(true);// allow key events
+		resetView();
 	}
-
+	
 	public void resetView() {
 		view = new AffineTransform();
 		repaint();
@@ -124,7 +134,7 @@ public class MLPaintPanel extends JComponent
 		WritableRaster rawdata = freshPaint.getRaster();
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
-				rawdata.setSample(x, y, 0, 0);// 0 or 1
+				rawdata.setSample(x, y, 0, FRESH_UNLABELED);
 			}
 		}
 		repaint();
@@ -145,27 +155,27 @@ public class MLPaintPanel extends JComponent
 		System.out.printf("MousePress %s\n", e.toString());
 		mousePrev = e;
 		if (e.isControlDown()) {
-		} else {// add fresh paint
-			brushFreshPaint(e);
+			// start dragging to pan the image
+		} else {
+			// add fresh paint
+			brushFreshPaint(e, e.isShiftDown());
 		}
 		e.consume();
+		grabFocus();// keyboard focus, so you can type digits
 	}
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
-		System.out.printf("MouseDrag %s\n", e.toString());
+		//System.out.printf("MouseDrag %s\n", e.toString());
 		if (e.isControlDown()) {
 			// pan the image
 			double dx = e.getPoint().getX() - mousePrev.getPoint().getX();
 			double dy = e.getPoint().getY() - mousePrev.getPoint().getY();
 			view.preConcatenate(AffineTransform.getTranslateInstance(dx, dy));
 			
-		} else if (e.isShiftDown()) {
-			// whatever you want
-			
 		} else {// default
 			// put paint down
-			brushFreshPaint(e);
+			brushFreshPaint(e, e.isShiftDown());
 		}
 		mousePrev = e;
 		e.consume();
@@ -176,13 +186,14 @@ public class MLPaintPanel extends JComponent
 	public void mouseReleased(MouseEvent e) {
 		System.out.printf("MouseRelease %s\n", e.toString());
 		// if it was painting, then extract the training set
-		if (!e.isControlDown() && !e.isShiftDown() && !e.isAltDown()) {
+		if (!e.isControlDown() && !e.isAltDown()) {
+			//MAYDO: run this in background thread if too slow
 			trainClassifier();
 			runDijkstra();
-			e.consume();
 		}
 		mousePrev = null;
 		repaint();
+		e.consume();
 	}
 
 	@Override
@@ -216,6 +227,7 @@ public class MLPaintPanel extends JComponent
 		if (Character.isDigit(ch)) {
 			brushRadius = 5 * (ch - '0' + 1);// somehow tranlate it
 			// show the user too
+			System.out.printf("paintbrush radius: %s\n", brushRadius);
 		}
 	}
 
@@ -248,39 +260,45 @@ public class MLPaintPanel extends JComponent
 		
 		repaint();
 	}
-
 	
-	private void brushFreshPaint(MouseEvent e) {
-		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
+	private void brushFreshPaint(MouseEvent e, boolean isNegative) {
+		int index = isNegative ? FRESH_NEG : FRESH_POS;
 		Ellipse2D brush = new Ellipse2D.Double(
 				e.getX() - brushRadius, 
 				e.getY() - brushRadius, 
 				2*brushRadius, 2*brushRadius);
-		g.setPaint(Color.WHITE);
-		g.fill(brush);
-		g.dispose();
-		repaint();
+		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
+		Color color = new Color(cm.getRGB(index));
+		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
+		g.setColor(color);
+		try {
+			AffineTransform inverse = view.createInverse();
+			g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
+			g.fill(brush);
+			g.dispose();
+			repaint();
+		} catch (NoninvertibleTransformException e1) {// won't happen
+			e1.printStackTrace();
+		}
 	}
 
 	@Override
 	protected void paintComponent(Graphics g) {
-		System.out.printf("paintComponent %s\n", new Date().toString());
 		super.paintComponent(g);
-		ThreadLocalRandom rand = ThreadLocalRandom.current();
 		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setColor(new Color(rand.nextInt()));
+		g2.setColor(getBackground());
 		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
 		g2.transform(view);
 		g2.drawImage(image, 0, 0, null);
-		g2.fillRect(rand.nextInt(width), rand.nextInt(height), 20,20);
-		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		if (classifierOutput != null) {
+		if (classifierOutput != null) {// MAYDO: instead have a transparency slider??  That'd be cool.
 			g2.drawImage(classifierOutput, 0, 0, null);
 		}
+		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+		// add frame to see limit, even if indistinguishable from backgound
+		g2.setColor(Color.BLACK);
+		g2.drawRect(0, 0, width, height);
 		g2.dispose();
 	}
-	
-	
 	
 	
 	///////   Technology-specific code, not just Java Swing GUI
@@ -290,38 +308,45 @@ public class MLPaintPanel extends JComponent
 	public void trainClassifier() {
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 		
+		// feature vectors of positive & negative training examples 
+		List<double[]> positives = Lists.newArrayListWithCapacity(5000);
+		List<double[]> negatives = Lists.newArrayListWithCapacity(5000);
+		
 		// extract positive examples from each fresh paint pixel that is 1
 		long t = System.currentTimeMillis();
-		List<double[]> positives = Lists.newArrayList();// feature vectors
+		int[] histogram = new int[4];
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
-				int index = rawdata.getSample(x, y, 0);// returns 0 or 1
-				if (index == FRESHPAINT) {// And it's a positive training example
-					double[] fv = getFeatureVector(x,y);
-					positives.add(fv);
+				int index = rawdata.getSample(x, y, 0);// band 0
+				if (index == FRESH_POS) {
+					positives.add(getFeatureVector(x,y));
+				} else if (index == FRESH_NEG) {
+					negatives.add(getFeatureVector(x,y));
 				}
+				histogram[index]++;
 			}
 		}
+		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 		int npos = positives.size();
-		t = SwingApp.reportTime(t, "extracted %s positives from %s x %s", npos, width, height);
-		if (npos < 30) {
-			return;
+		int nneg = negatives.size();
+		t = SwingApp.reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint", 
+				npos, nneg, width, height);
+		if (npos < 30) {// not enough
+			return;// silently return
 		}
 		
-		// get some random negatives against the positives
 		//TODO: smarter testing / picking
-		int nneg = 2 * npos;// try 2x or 3x as many negatives
-		List<double[]> negatives = Lists.newArrayList();// feature vectors
+		// if not enough negatives, add additional negatives collected randomly
 		Random rand = new Random();
-		while (negatives.size() < nneg) {
+		while (negatives.size() < 2 * npos) {// try 2x or 3x as many negatives
 			int x = rand.nextInt(width);
 			int y = rand.nextInt(height);
 			int index = rawdata.getSample(x, y, 0);// returns 0 or 1
-			if (index != FRESHPAINT) {
+			if (index == FRESH_UNLABELED) {
 				negatives.add(getFeatureVector(x, y));
 			}
 		}
-		Preconditions.checkArgument(nneg == negatives.size());
+		nneg = negatives.size();
 
 		// Convert dataset into SMILE format
 		int nFeatures = positives.get(0).length;
@@ -344,9 +369,14 @@ public class MLPaintPanel extends JComponent
 		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
 		t = SwingApp.reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive", 
 				nall, nFeatures, 100.0 * npos / nall);
+		
+		if (classifierOutput != null) {
+			classifierOutput = runClassifier();
+		}
 	}
 	
 	private double[] getFeatureVector(int x, int y) {
+		//MAYDO: iff this gets to be the CPU bottleneck, then we could cache answers
 		Color clr = new Color(image.getRGB(x, y));
         int red =   clr.getRed();
         int green = clr.getGreen();
@@ -372,7 +402,7 @@ public class MLPaintPanel extends JComponent
 			Arrays.fill(distances[x], Double.POSITIVE_INFINITY);
 			for (int y = 0; y < height; y++) {
 				int index = rawdata.getSample(x, y, 0);// 0 or 1
-				if (index == FRESHPAINT) {
+				if (index == FRESH_POS) {
 					distances[x][y] = 0;
 					queue.add(new MyPoint(0.0, x, y));
 				}
@@ -404,8 +434,7 @@ public class MLPaintPanel extends JComponent
 		} else {
 			classifierOutput = null;
 		}
-		repaint(50);
-		//revalidate();
+		repaint();
 	}
 
 }
