@@ -39,7 +39,7 @@ import smile.classification.SoftClassifier;
 
 
 /** Magic Label Paint panel.
- * 
+ *   This panel rests within the MLPaintApp.
  */
 public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
@@ -63,7 +63,7 @@ public class MLPaintPanel extends JComponent
 	int width, height;
 
 	/** extra image layers:  filename & image.  Does not contain master image or labels layers. 
-	 * Might have computed layers someday. 
+	 * Might have computed layers someday.   GROK: In world coordinates
 	 */
 	public LinkedHashMap<String, BufferedImage> extraLayers;
 
