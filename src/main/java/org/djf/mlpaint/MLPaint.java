@@ -33,7 +33,7 @@ import com.google.common.io.MoreFiles;
 
 
 /** Magic Label Paint ~ ML Paint
- * 
+ *  A machine learning tool to make labeling suggestions based upon active labeling
  */
 public class MLPaint extends SwingApp {
 	
