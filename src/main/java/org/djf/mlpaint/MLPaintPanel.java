@@ -116,6 +116,12 @@ public class MLPaintPanel extends JComponent
 		height = image.getHeight();
 		labels = labels2;
 		extraLayers = extraLayers2;
+		Preconditions.checkArgument(width  == labels.getWidth() && height == labels.getHeight(),
+				"The labels size does not match the image size.");
+		extraLayers.values().forEach(im -> {
+			Preconditions.checkArgument(width  == im.getWidth() && height == im.getHeight(),
+					"The extra layer size does not match the image size.");
+		});
 		distances = new double[width][height];
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		clearFreshPaint();
