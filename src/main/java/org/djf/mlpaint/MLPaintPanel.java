@@ -429,11 +429,30 @@ public class MLPaintPanel extends JComponent
 		//		Add choicePoint to region.
 		// 		Find 4-connected components of choicePoint
 		//				Calculate and store new distances if lesser
-		//				If not in region (and not in queue if we care about massive duplication)
+		//				If not in region and not in queue
 		//					Add to queue
 		//		Set choicePoint to the smallest one in queue.
-		//MAYDO: We could save choicePoint, region, queue, and be able to just continue where we left off
+		//MAYDO: We could save globally choicePoint, region, queue, and be able to just continue where we left off
+		// return region, queue
 		//
+		//
+		// initialize doubles[][] totalDistancesRegion at world size, +INF
+		// initialize empty queue
+		// Preconditions... make sure we have a choicePoint picked--xy from first mouse down.
+		// Repeat until stopping condition... for now, 2x positive training examples
+		//		totalDistancesRegion[choicePoint] = getTotalDistance(choicePoint)
+		//		for (x,y) in [(x+1,y), (x-1,y), (x,y+1), (x,y-1)]:
+		//			if isOutsideImage: continue
+		//			If getEdgeDistance(x,y)+totalDistancesRegion[choicePoint] < getTotalDistance(x,y)://TODO: INF trouble
+		//				If (x,y) in totalDistancesRegion:
+		//					throw Exception, my Dijkstra understanding is faulty
+		//				Else if (x,y) in queue
+		//					update totalDistance for (x,y) in queue
+		//				Else:
+		//					add (x,y) to the queue at this totalDistance
+		//			Else if not in queue:
+		//				throw Exception, My INF adding seems to have failed
+		//		choicePoint = least getTotalDistance in queue
 	}
 
 	/** initialize Dijkstra distance grid & fill the queue with fresh paint locations @ fuel cost 0 */
@@ -452,6 +471,7 @@ public class MLPaintPanel extends JComponent
 	}
 	/* This function might be changed... */
 	private double getEdgeDistance(int x, int y){
+			// Todo: if x,y are outside global image, return INF... bug-prone solution?
 			// MAYDO: Get WritableRaster rawdata freshpaint
 			// if it's negative, return +INF //be careful young man with adding INF to INF
 			// if it's positive, return 0 or 1*10^-6, that is, MIN_DISTANCE_VALUE
