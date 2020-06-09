@@ -314,7 +314,7 @@ public class MLPaintPanel extends JComponent
 	///////   Technology-specific code, not just Java Swing GUI
 	
 	
-	/** Extract training set .  also, initialize the distances[][] matrix */
+	/** Extract training set and train. */
 	public void trainClassifier() {
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 		
@@ -380,9 +380,9 @@ public class MLPaintPanel extends JComponent
 		t = SwingApp.reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive", 
 				nall, nFeatures, 100.0 * npos / nall);
 		
-		if (classifierOutput != null) {
+		/*if (classifierOutput != null) {
 			classifierOutput = runClassifier();
-		}
+		}*/
 	}
 	
 	private double[] getFeatureVector(int x, int y) {
@@ -398,10 +398,15 @@ public class MLPaintPanel extends JComponent
 		return rr;
 	}
 
+	private double getSoftScoreDistanceTransform(double softScore) {
+		double rr = softScore;
+		return rr;
+	}
+
 	private void runDijkstra() {
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest fuel cost first
 		initDistances(queue);
-		// TODO Auto-generated method stub
+		// TODO Auto-generated method stub      //https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
 		
 	}
 
