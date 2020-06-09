@@ -364,7 +364,7 @@ public class MLPaintPanel extends JComponent
 		double[][] fvs = Streams.concat(positives.stream(), negatives.stream())
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
-				.map(i -> i < npos ? 1 : 0)// positives first
+				.map(i -> i < npos ? 0 : 1)// positives first
 				.toArray();
 		
 		// train the SVM or whatever model
@@ -398,16 +398,26 @@ public class MLPaintPanel extends JComponent
 		return rr;
 	}
 
-	private double getSoftScoreDistanceTransform(double softScore) {
-		double rr = softScore;
-		return rr;
-	}
 
 	private void runDijkstra() {
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest fuel cost first
 		initDistances(queue);
 		// TODO Auto-generated method stub      //https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
-		
+		/*
+		dist[s] ←0        			distance'to'source'vertex'is'zero)
+		for  all v ∈ V–{s}
+			do''dist[v]'←∞'      		set'all'other'distances'to'infinity)'
+		S←∅								(S,'the'set'of'visited'vertices'is'initially'empty)'
+		Q←V								(Q,'the'queue'initially'contains'all'vertices)'''''''''''''''
+		while'Q'≠∅ ' '					(while'the'queue'is'not'empty)'
+		do'''u'← mindistance(Q,dist) 	(select'the'element'of'Q'with'the'min.'distance)'
+		''''''S←S∪{u}' ' '				(add'u'to'list'of'visited'vertices)'
+		'''''''for'all'v'∈'neighbors[u]
+		''''''''''''''do''if'''dist[v]'>'dist[u]'+'w(u,'v)' 			(if'new'shortest'path'found)
+		'''''''''''''''''''''''''then''''''d[v]'←d[u]'+'w(u,'v) 		(set'new'value'of'shortest'path)'
+		'''''															(if'desired,'add'traceback'code)
+		return'dist*/
+
 	}
 
 	/** initialize Dijkstra distance grid & fill the queue with fresh paint locations @ fuel cost 0 */
@@ -419,10 +429,27 @@ public class MLPaintPanel extends JComponent
 				int index = rawdata.getSample(x, y, 0);// 0 or 1
 				if (index == FRESH_POS) {
 					distances[x][y] = 0;
-					queue.add(new MyPoint(0.0, x, y));
+					queue.add(new MyPoint(0.0, x, y)); //Todo: Check. Not all these are connected.
 				}
 			}
 		}
+	}
+	/* This function might be changed... */
+	private double getEdgeDistance(int x, int y){
+			// MAYDO: Get WritableRaster rawdata freshpaint
+			// if it's negative, return +INF //be careful young man with adding INF to INF
+			// if it's positive, return 0 or 1*10^-6, that is, MIN_DISTANCE_VALUE
+			// TODO: If it's already labeled in the real image, don't even consider it.
+			// load writable Raster, get if it's positive or negative set distance to +INF
+		// get the feature vector
+		// get the classifier score
+		// getSoftScoreDistanceTransform
+		// return rr;
+	}
+
+	private double getSoftScoreDistanceTransform(double softScore) {  //
+		double rr = softScore;
+		return rr;
 	}
 
 	private BufferedImage runClassifier() {
