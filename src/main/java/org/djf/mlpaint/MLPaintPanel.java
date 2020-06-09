@@ -436,23 +436,32 @@ public class MLPaintPanel extends JComponent
 		// return region, queue
 		//
 		//
-		// initialize doubles[][] totalDistancesRegion at world size, +INF
-		// initialize empty queue
-		// Preconditions... make sure we have a choicePoint picked--xy from first mouse down.
-		// Repeat until stopping condition... for now, 2x positive training examples
-		//		totalDistancesRegion[choicePoint] = getTotalDistance(choicePoint)
+		// initialize doubles[width][height] totalDistancesRegion at world size, +INF
+		// initialize empty queue for fuelCost MyPoints
+		// Preconditions... make sure we have at least one seedPoint picked--xy from first mouse down.
+		// Add all seedPoints to the queue
+		// 				MAYDO:(we expect to have prepared only one seedPoint, but this would work for more)
+		// Add all queue points distance values to the totalDistancesRegion  //remember, connecgted omponents, search for best classifier pit
+		// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
+		//		choicePoint = least getTotalDistance in queue
+		//		delete choicePoint from queue
 		//		for (x,y) in [(x+1,y), (x-1,y), (x,y+1), (x,y-1)]:
 		//			if isOutsideImage: continue
-		//			If getEdgeDistance(x,y)+totalDistancesRegion[choicePoint] < getTotalDistance(x,y)://TODO: INF trouble
+		//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
+		//			If proposedCost < getTotalDistance(x,y)://TODO: INF trouble
 		//				If (x,y) in totalDistancesRegion:
-		//					throw Exception, my Dijkstra understanding is faulty
-		//				Else if (x,y) in queue
-		//					update totalDistance for (x,y) in queue
-		//				Else:
+		//					throw Exception, Dijkstra understanding is faulty for shortest paths held in totalDistancesRegion
+		//				Else if (x,y) in queue:
+		//					throw Exception, Dijkstra understanding is faulty for shortest paths held in queue
+		//				Else (therefore, totalDistancesRegion[x,y] == INF):
+		//					totalDistancesRegion[(x,y)] = getTotalDistance((x,y)))
 		//					add (x,y) to the queue at this totalDistance
-		//			Else if not in queue:
-		//				throw Exception, My INF adding seems to have failed
-		//		choicePoint = least getTotalDistance in queue
+		//			Else: Do nothing.
+		//					No need to update any distance.
+		//					Anything needing added to the queue would have had INF distance.
+		//		delete choicePoint
+		//Return totalDistancesRegion, queue
+		// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
 	}
 
 	/** initialize Dijkstra distance grid & fill the queue with fresh paint locations @ fuel cost 0 */
@@ -471,7 +480,6 @@ public class MLPaintPanel extends JComponent
 	}
 	/* This function might be changed... */
 	private double getEdgeDistance(int x, int y){
-			// Todo: if x,y are outside global image, return INF... bug-prone solution?
 			// MAYDO: Get WritableRaster rawdata freshpaint
 			// if it's negative, return +INF //be careful young man with adding INF to INF
 			// if it's positive, return 0 or 1*10^-6, that is, MIN_DISTANCE_VALUE
