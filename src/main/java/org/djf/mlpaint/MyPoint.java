@@ -7,19 +7,19 @@ package org.djf.mlpaint;
 public class MyPoint implements Comparable<MyPoint> {
 
 	/** fuel cost required to get here */
-	final double fuel;
+	final double fuelCost;
 	/** index position */
 	final int x, y;
 	
-	public MyPoint(double fuel, int x, int y) {
+	public MyPoint(double fuelCost, int x, int y) {
 		super();
-		this.fuel = fuel;
+		this.fuelCost = fuelCost;
 		this.x = x;
 		this.y = y;
 	}
 
 	@Override
 	public int compareTo(MyPoint competitor) {
-		return Double.compare(fuel, competitor.fuel);
+		return Double.compare(fuelCost, competitor.fuelCost);
 	}
 }

@@ -426,11 +426,13 @@ public class MLPaintPanel extends JComponent
 		// Set to-be-picked as a starting seed with distance zero.
 		// Initialize empty queue, empty region
 		// Repeat until stopping condition:
-		// 		Find 4-connected components of most-recent-pick
-		//				Calculate new distances if lesser
-		//				If not in region and not in queue
+		//		Add choicePoint to region.
+		// 		Find 4-connected components of choicePoint
+		//				Calculate and store new distances if lesser
+		//				If not in region (and not in queue if we care about massive duplication)
 		//					Add to queue
-		//
+		//		Set choicePoint to the smallest one in queue.
+		//MAYDO: We could save choicePoint, region, queue, and be able to just continue where we left off
 		//
 	}
 
