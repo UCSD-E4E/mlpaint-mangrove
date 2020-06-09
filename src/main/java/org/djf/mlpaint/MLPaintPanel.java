@@ -418,6 +418,20 @@ public class MLPaintPanel extends JComponent
 		'''''															(if'desired,'add'traceback'code)
 		return'dist*/
 
+		// We'll probably want to be able to runDijkstra to return the list of points
+		// make interactive suggestions from there
+		// If we need more, compute more Dijkstra by passing in the queues, etc.
+		// We want a dynamic queue, a queue of only the connected ring. Save that queue? It is the bounding shape.
+		//
+		// Set to-be-picked as a starting seed with distance zero.
+		// Initialize empty queue, empty region
+		// Repeat until stopping condition:
+		// 		Find 4-connected components of most-recent-pick
+		//				Calculate new distances if lesser
+		//				If not in region and not in queue
+		//					Add to queue
+		//
+		//
 	}
 
 	/** initialize Dijkstra distance grid & fill the queue with fresh paint locations @ fuel cost 0 */
@@ -441,6 +455,7 @@ public class MLPaintPanel extends JComponent
 			// if it's positive, return 0 or 1*10^-6, that is, MIN_DISTANCE_VALUE
 			// TODO: If it's already labeled in the real image, don't even consider it.
 			// load writable Raster, get if it's positive or negative set distance to +INF
+			// MAYDO: If it's off the affine view screen, don't label it.
 		// get the feature vector
 		// get the classifier score
 		// getSoftScoreDistanceTransform
