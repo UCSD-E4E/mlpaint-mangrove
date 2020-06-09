@@ -6,7 +6,7 @@ package org.djf.mlpaint;
  */
 public class MyPoint implements Comparable<MyPoint> {
 
-	/** fuel required to get here */
+	/** fuel cost required to get here */
 	final double fuel;
 	/** index position */
 	final int x, y;

@@ -63,7 +63,7 @@ public class MLPaintPanel extends JComponent
 	int width, height;
 
 	/** extra image layers:  filename & image.  Does not contain master image or labels layers. 
-	 * Might have computed layers someday.   GROK: In world coordinates
+	 * Might have computed layers someday.
 	 */
 	public LinkedHashMap<String, BufferedImage> extraLayers;
 
@@ -89,7 +89,7 @@ public class MLPaintPanel extends JComponent
 	private double[][] distances;
 	
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
-	public BufferedImage proposed; //GROK: why grayed out?
+	public BufferedImage proposed;
 
 
 	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
@@ -100,7 +100,8 @@ public class MLPaintPanel extends JComponent
 	
 
 	
-	public MLPaintPanel() {   //GROK: the naming of this method--oughtn't it to be public static void main?
+	public MLPaintPanel() {
+		super();
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
@@ -136,7 +137,7 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
-	public void clearFreshPaint() {  //GROK: Does this change fp itself
+	public void clearFreshPaint() {
 		WritableRaster rawdata = freshPaint.getRaster();
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
@@ -185,7 +186,7 @@ public class MLPaintPanel extends JComponent
 		}
 		mousePrev = e;
 		e.consume();
-		repaint();            					//GROK: How is a new view affine transform going to affect the repaint?
+		repaint();
 	}
 
 	@Override
@@ -250,7 +251,7 @@ public class MLPaintPanel extends JComponent
 			// zooms at mouse point
 			view.preConcatenate(AffineTransform.getTranslateInstance(-x, -y));
 			view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
-			view.preConcatenate(AffineTransform.getTranslateInstance(x, y)); //GROK: should this (x,y) be scaled?
+			view.preConcatenate(AffineTransform.getTranslateInstance(x, y));
 			
 		} else if (e.isShiftDown()) {// shift adjusts brush radius
 			brushRadius *= scale;
@@ -290,7 +291,6 @@ public class MLPaintPanel extends JComponent
 
 	/**GROC: ?Paints the image, freshpaint, and possibly classifier output, to the screen.
 	 *
-	 * @param g
 	 */
 	@Override
 	protected void paintComponent(Graphics g) {
@@ -323,7 +323,7 @@ public class MLPaintPanel extends JComponent
 		List<double[]> negatives = Lists.newArrayListWithCapacity(5000);
 		
 		// extract positive examples from each fresh paint pixel that is 1
-		long t = System.currentTimeMillis();
+		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
 		int[] histogram = new int[4];
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {

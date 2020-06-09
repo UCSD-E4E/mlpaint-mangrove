@@ -48,7 +48,7 @@ public class MLPaintApp extends SwingApp {
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
-		setTitle("ML Paint, version 2020.06.02b");// update version number periodically   //GROK: where from?
+		setTitle("ML Paint, version 2020.06.02b");// update version number periodically   //Superclass somewhere above swingApp
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
 		makeContent();												// MLPaintApp method
 		makeBehavior();												// MLPaintApp method
@@ -83,7 +83,7 @@ public class MLPaintApp extends SwingApp {
 		// EAST- nothing
 		
 		// SOUTH
-		add(status, BorderLayout.SOUTH);							// GROK: Where do we get status?
+		add(status, BorderLayout.SOUTH);
 	}
 
 	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
@@ -148,8 +148,8 @@ public class MLPaintApp extends SwingApp {
 		if (rr != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
-		directory = jfc.getCurrentDirectory().toPath();						//GROK: directory sourcing
-		storeDirectory(MLPaintApp.class);// remember it for future runs of the program		//GROK: SwingApp, same Q about prefs.
+		directory = jfc.getCurrentDirectory().toPath();
+		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
 
 
 		// TODO: if image too big to load:
@@ -181,9 +181,6 @@ public class MLPaintApp extends SwingApp {
 		if (labels == null) {
 			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
 			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with just 4 or 16 colors));
-		}
-		if (image.getWidth() != labels.getWidth() || image.getHeight() != labels.getHeight()) {  //GROK: Is this a fine idea?
-			throw new IOException("The loaded labels ought to be the same shape as the image.");
 		}
 
 		// My original design REPLACED the mlp, but it was forever not re-painting.
