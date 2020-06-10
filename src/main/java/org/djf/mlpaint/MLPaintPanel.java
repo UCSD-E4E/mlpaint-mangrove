@@ -516,7 +516,7 @@ public class MLPaintPanel extends JComponent
 			for (int y = 0; y < height; y++) {						//& fill the queue with fresh paint locations @ fuel cost 0
 				int index = rawData.getSample(x, y, 0);// 0 or 1
 				if (index == FRESH_POS) {
-					double score = getClassifierScore(x,y);
+					double score0 = getClassifierProbNeg(x,y);
 					smallest = new MyPoint(score,x,y)
 				}
 			}
@@ -526,7 +526,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 	/**Return the probability of a negative value, so positive is low. */
-	private double getClassifierScore(int x, int y) {
+	private double getClassifierProbNeg(int x, int y) {
 		double[] outputs = new double[2];
 		double[] fv = getFeatureVector(x, y);
 		classifier.predict(fv, outputs);
@@ -541,12 +541,8 @@ public class MLPaintPanel extends JComponent
 		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
 		WritableRaster raster = out.getRaster();
 		IntStream.range(0, width).parallel().forEach(x -> {// run in parallle for speed
-			double[] outputs = new double[2];
 			for (int y = 0; y < height; y++) {
-				double[] fv = getFeatureVector(x, y);
-				classifier.predict(fv, outputs);
-				double score0 = outputs[0];// probability in [0,1] of class 0, negative
-				double score1 = outputs[1];// probability in [0,1] of class 1, positive
+				double score0 = getClassifierProbNeg(x,y);
 				int index = (int) (255 * score0);
 				raster.setSample(x, y, 0, index);
 			}
