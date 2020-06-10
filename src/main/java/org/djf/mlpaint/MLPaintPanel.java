@@ -364,7 +364,7 @@ public class MLPaintPanel extends JComponent
 		double[][] fvs = Streams.concat(positives.stream(), negatives.stream())
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
-				.map(i -> i < npos ? 0 : 1)// positives first
+				.map(i -> i < npos ? 1 : 0)// positives first
 				.toArray();
 		
 		// train the SVM or whatever model
@@ -400,8 +400,6 @@ public class MLPaintPanel extends JComponent
 
 
 	private void runDijkstra() {
-		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest fuel cost first
-		initDistances(queue);
 		// TODO Auto-generated method stub      //https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
 		/*
 		dist[s] ←0        			distance'to'source'vertex'is'zero)
@@ -437,11 +435,19 @@ public class MLPaintPanel extends JComponent
 		//
 		//
 		// initialize doubles[width][height] totalDistancesRegion at world size, +INF
+		double[][] distances = new double[width][height];
+		for (double[] row: distances)
+			Arrays.fill(row, Double.POSITIVE_INFINITY);
 		// initialize empty queue for fuelCost MyPoints
 		// Preconditions... make sure we have at least one seedPoint picked--xy from first mouse down.
 		// Add all seedPoints to the queue
 		// 				MAYDO:(we expect to have prepared only one seedPoint, but this would work for more)
 		// Add all queue points distance values to the totalDistancesRegion  //remember, connecgted omponents, search for best classifier pit
+		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
+		pythonList dijkstraSeedPoints = getDijkstraSeedPoints();
+		for item in dijkstraSeedPoints
+			add item to queue
+			add item.fuelCost to distances
 		// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 		//		choicePoint = least getTotalDistance in queue
 		//		delete choicePoint from queue
@@ -464,12 +470,13 @@ public class MLPaintPanel extends JComponent
 		// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
 	}
 
-	/** initialize Dijkstra distance grid & fill the queue with fresh paint locations @ fuel cost 0 */
+	//This is not needed
+	/** initialize Dijkstra distance grid
 	private void initDistances(PriorityQueue<MyPoint> queue) {
 		WritableRaster rawdata = freshPaint.getRaster();
 		for (int x = 0; x < width; x++) {
 			Arrays.fill(distances[x], Double.POSITIVE_INFINITY);
-			for (int y = 0; y < height; y++) {
+			for (int y = 0; y < height; y++) {						//& fill the queue with fresh paint locations @ fuel cost 0
 				int index = rawdata.getSample(x, y, 0);// 0 or 1
 				if (index == FRESH_POS) {
 					distances[x][y] = 0;
@@ -477,7 +484,8 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
-	}
+	}*/
+
 	/* This function might be changed... */
 	private double getEdgeDistance(int x, int y){
 			// MAYDO: Get WritableRaster rawdata freshpaint
@@ -496,6 +504,37 @@ public class MLPaintPanel extends JComponent
 		double rr = softScore;
 		return rr;
 	}
+
+	/** Return a bunch of seed MyPoints with 0 initialization distance
+	 * 	Maydo: Do not allow a suggestion outside of view
+	 * 	Maydo: Get connected components and for each get a lowest classifier score
+	 */
+	private pythonList getDijkstraSeedPoints() {
+		WritableRaster rawData = freshPaint.getRaster();
+		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {						//& fill the queue with fresh paint locations @ fuel cost 0
+				int index = rawData.getSample(x, y, 0);// 0 or 1
+				if (index == FRESH_POS) {
+					double score = getClassifierScore(x,y);
+					smallest = new MyPoint(score,x,y)
+				}
+			}
+		}
+		pythonList rr = [smallest];
+		return rr;
+	}
+
+	/**Return the probability of a negative value, so positive is low. */
+	private double getClassifierScore(int x, int y) {
+		double[] outputs = new double[2];
+		double[] fv = getFeatureVector(x, y);
+		classifier.predict(fv, outputs);
+		double score0 = outputs[0];// probability in [0,1] of class 0, negative
+		double score1 = outputs[1];// probability in [0,1] of class 1, positive
+		return score0;
+	}
+
 
 	private BufferedImage runClassifier() {
 		Preconditions.checkNotNull(classifier, "Must put positive paint down first");
