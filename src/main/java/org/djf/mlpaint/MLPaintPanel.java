@@ -70,6 +70,7 @@ public class MLPaintPanel extends JComponent
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
 	private BufferedImage freshPaint;
+	private int freshPaintPositives;//GROK: run by classifier
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
 	public double brushRadius = 10.0;
@@ -335,6 +336,7 @@ public class MLPaintPanel extends JComponent
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 		int npos = positives.size();
 		int nneg = negatives.size();
+		freshPaintPositives = npos;//GROK
 		t = SwingApp.reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint", 
 				npos, nneg, width, height);
 		if (npos < 30) {// not enough
@@ -409,7 +411,8 @@ public class MLPaintPanel extends JComponent
 			queue.add(item);
 			distances[item.x][item.y] = item.fuelCost;
 		}
-		for () {
+		int reps = (int) (freshPaintPositives*1.5);
+		for (int i=0; i < reps; i++) {
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
 			MyPoint choicePoint = queue.poll(); //Maydo: bugsafe this
@@ -421,13 +424,15 @@ public class MLPaintPanel extends JComponent
 			for (int[] pair : adjFour) {
 				int xmine = pair[0];
 				int ymine = pair[1];
-			//	if isOutsideImage: continue
-				if (isXYOutsideImage(xmine, ymine)) continue;
-				if (distances[xmine][ymine] == Double.POSITIVE_INFINITY) {
-
+				if (isXYOutsideImage(xmine, ymine)) continue; //	if isOutsideImage: continue
+				if (distances[xmine][ymine] == Double.POSITIVE_INFINITY) { //Maydo: consider safer way to tell it's new
+					double proposedCost = getEdgeDistance(xmine, ymine) + distances[choicePoint.x][choicePoint.y];
+					MyPoint queuePoint = new MyPoint(proposedCost,xmine, ymine);
+					queue.add(queuePoint);
+					distances[queuePoint.x][queuePoint.y] = queuePoint.fuelCost;
 				}
 			//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
-			//			If proposedCost < getTotalDistance(x,y)://TODO: INF trouble
+			//			If proposedCost < getTotalDistance(x,y):
 			//				If (x,y) in totalDistancesRegion:
 			//					throw Exception, Dijkstra understanding is faulty for shortest paths held in totalDistancesRegion
 			//				Else if (x,y) in queue:
