@@ -395,26 +395,25 @@ public class MLPaintPanel extends JComponent
 	}
 
 
-	private void runDijkstra() {
-		// TODO Auto-generated method stub      //https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
+	private PriorityQueue<MyPoint> runDijkstra() {
+		//https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
 		//
-		// initialize doubles[width][height] totalDistancesRegion at world size, +INF
-		double[][] distances = new double[width][height];
-		for (double[] row: distances)
+		// set all of doubles[width][height] to +INF
+		for (double[] row: distances) {
 			Arrays.fill(row, Double.POSITIVE_INFINITY);
+		}
 		// initialize empty queue for fuelCost MyPoints
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
 		// Add seedPoints to the queue and thence to distances  MAYDO: More than one
-		ArrayList<MyPoint> dijkstraSeedPoints = getDijkstraSeedPoints();
-		for (MyPoint item: dijkstraSeedPoints) {
+		for (MyPoint item: getDijkstraSeedPoints()) {
 			queue.add(item);
 			distances[item.x][item.y] = item.fuelCost;
 		}
 		for () {
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
-			MyPoint choicePoint = queue.poll();
-			int[][] adjFour = {	{choicePoint.x,choicePoint.y+1},
+			MyPoint choicePoint = queue.poll(); //Maydo: bugsafe this
+			int[][] adjFour = {		{choicePoint.x,choicePoint.y+1},
 									{choicePoint.x,choicePoint.y-1},
 									{choicePoint.x+1,choicePoint.y},
 									{choicePoint.x-1,choicePoint.y}};
@@ -422,8 +421,11 @@ public class MLPaintPanel extends JComponent
 			for (int[] pair : adjFour) {
 				int xmine = pair[0];
 				int ymine = pair[1];
-				if (isXYOutsideImage(xmine, ymine)) { continue; }
-			//			if isOutsideImage: continue
+			//	if isOutsideImage: continue
+				if (isXYOutsideImage(xmine, ymine)) continue;
+				if (distances[xmine][ymine] == Double.POSITIVE_INFINITY) {
+
+				}
 			//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
 			//			If proposedCost < getTotalDistance(x,y)://TODO: INF trouble
 			//				If (x,y) in totalDistancesRegion:
@@ -437,9 +439,9 @@ public class MLPaintPanel extends JComponent
 			//					No need to update any distance.
 			//					Anything needing added to the queue would have had INF distance.
 			}
-			return distances, queue;
 			// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
 		}
+		return queue;
 	}
 
 	private boolean isXYOutsideImage(int x, int y) {
