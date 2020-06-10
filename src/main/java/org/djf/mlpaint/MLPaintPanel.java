@@ -51,7 +51,11 @@ public class MLPaintPanel extends JComponent
 	private static final int FRESH_POS = 1;
 	private static final int FRESH_NEG = 2; 
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
-	
+
+	// label suggestion index codes (0 or 1 maximum)
+	private static final int SUGGESTION_TRANSPARENT = 0;
+	private static final int SUGGESTION_EDGE = 1;
+	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHABLUE};
 	
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -80,7 +84,8 @@ public class MLPaintPanel extends JComponent
 	/** classifier output image, grayscale */
 	private BufferedImage classifierOutput;
 
-	/** Distance to each pixel from fresh paint, initially +infinity.  
+	private BufferedImage suggestionOutlines;
+	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation. 
 	 */
 	private double[][] distances;
@@ -193,7 +198,8 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() && !e.isAltDown()) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
-			runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			PriorityQueue queue = runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			visualizeQueue(queue);
 		}
 		mousePrev = null;
 		repaint();
@@ -546,4 +552,37 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
+	private BufferedImage visualizeQueue(PriorityQueue queue) {
+		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
+		WritableRaster raster = out.getRaster(); SUGGESTION_TRANSPARENT, SUGGESTION_EDGE
+		suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
+		for edgePoint in queue:
+			int index = 0;
+			raster.setSample(edgePoint.x, edgePoint.y, index);
+			raster.setSample(edgePoint.x+1, edgePoint.y, index);
+			raster.setSample(edgePoint.x-1, edgePoint.y, index);
+			raster.setSample(edgePoint.x, edgePoint.y+1, index);
+			raster.setSample(edgePoint.x, edgePoint.y-1, index);
+		}
+		//Todo
+		return out;
+	}
 }
+		int index = isNegative ? FRESH_NEG : FRESH_POS;
+		Ellipse2D brush = new Ellipse2D.Double(
+		e.getX() - brushRadius,
+		e.getY() - brushRadius,
+		2*brushRadius, 2*brushRadius);
+		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
+		Color color = new Color(cm.getRGB(index));
+		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
+		g.setColor(color);
+		try {
+		AffineTransform inverse = view.createInverse();
+		g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
+		g.fill(brush);
+		g.dispose();
+		repaint();
+		} catch (NoninvertibleTransformException e1) {// won't happen
+		e1.printStackTrace();
+		}

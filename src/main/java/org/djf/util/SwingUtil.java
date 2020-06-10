@@ -34,7 +34,7 @@ public class SwingUtil {
 				colors.length <= 2 ? 1 :
 			    colors.length <= 4 ? 2 :
 			    	4;
-		int size = 1 << bitsPerPixel;
+		int size = 1 << bitsPerPixel;								//GROC
 		byte[] r = new byte[size];
 		byte[] g = new byte[size];
 		byte[] b = new byte[size];
