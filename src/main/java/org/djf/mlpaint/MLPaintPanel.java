@@ -18,11 +18,7 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
@@ -401,73 +397,54 @@ public class MLPaintPanel extends JComponent
 
 	private void runDijkstra() {
 		// TODO Auto-generated method stub      //https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
-		/*
-		dist[s] ←0        			distance'to'source'vertex'is'zero)
-		for  all v ∈ V–{s}
-			do''dist[v]'←∞'      		set'all'other'distances'to'infinity)'
-		S←∅								(S,'the'set'of'visited'vertices'is'initially'empty)'
-		Q←V								(Q,'the'queue'initially'contains'all'vertices)'''''''''''''''
-		while'Q'≠∅ ' '					(while'the'queue'is'not'empty)'
-		do'''u'← mindistance(Q,dist) 	(select'the'element'of'Q'with'the'min.'distance)'
-		''''''S←S∪{u}' ' '				(add'u'to'list'of'visited'vertices)'
-		'''''''for'all'v'∈'neighbors[u]
-		''''''''''''''do''if'''dist[v]'>'dist[u]'+'w(u,'v)' 			(if'new'shortest'path'found)
-		'''''''''''''''''''''''''then''''''d[v]'←d[u]'+'w(u,'v) 		(set'new'value'of'shortest'path)'
-		'''''															(if'desired,'add'traceback'code)
-		return'dist*/
-
-		// We'll probably want to be able to runDijkstra to return the list of points
-		// make interactive suggestions from there
-		// If we need more, compute more Dijkstra by passing in the queues, etc.
-		// We want a dynamic queue, a queue of only the connected ring. Save that queue? It is the bounding shape.
-		//
-		// Set to-be-picked as a starting seed with distance zero.
-		// Initialize empty queue, empty region
-		// Repeat until stopping condition:
-		//		Add choicePoint to region.
-		// 		Find 4-connected components of choicePoint
-		//				Calculate and store new distances if lesser
-		//				If not in region and not in queue
-		//					Add to queue
-		//		Set choicePoint to the smallest one in queue.
-		//MAYDO: We could save globally choicePoint, region, queue, and be able to just continue where we left off
-		// return region, queue
-		//
 		//
 		// initialize doubles[width][height] totalDistancesRegion at world size, +INF
 		double[][] distances = new double[width][height];
 		for (double[] row: distances)
 			Arrays.fill(row, Double.POSITIVE_INFINITY);
 		// initialize empty queue for fuelCost MyPoints
-		// Preconditions... make sure we have at least one seedPoint picked--xy from first mouse down.
-		// Add all seedPoints to the queue
-		// 				MAYDO:(we expect to have prepared only one seedPoint, but this would work for more)
-		// Add all queue points distance values to the totalDistancesRegion  //remember, connecgted omponents, search for best classifier pit
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
-		pythonList dijkstraSeedPoints = getDijkstraSeedPoints();
-		for item in dijkstraSeedPoints
-			add item to queue
-			add item.fuelCost to distances
-		// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
-		//		choicePoint = least getTotalDistance in queue
-		//		delete choicePoint from queue
-		//		for (x,y) in [(x+1,y), (x-1,y), (x,y+1), (x,y-1)]:
-		//			if isOutsideImage: continue
-		//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
-		//			If proposedCost < getTotalDistance(x,y)://TODO: INF trouble
-		//				If (x,y) in totalDistancesRegion:
-		//					throw Exception, Dijkstra understanding is faulty for shortest paths held in totalDistancesRegion
-		//				Else if (x,y) in queue:
-		//					throw Exception, Dijkstra understanding is faulty for shortest paths held in queue
-		//				Else (therefore, totalDistancesRegion[x,y] == INF):
-		//					totalDistancesRegion[(x,y)] = getTotalDistance((x,y)))
-		//					add (x,y) to the queue at this totalDistance
-		//			Else: Do nothing.
-		//					No need to update any distance.
-		//					Anything needing added to the queue would have had INF distance.
-		//		delete choicePoint
-		//Return totalDistancesRegion, queue
-		// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
+		// Add seedPoints to the queue and thence to distances  MAYDO: More than one
+		ArrayList<MyPoint> dijkstraSeedPoints = getDijkstraSeedPoints();
+		for (MyPoint item: dijkstraSeedPoints) {
+			queue.add(item);
+			distances[item.x][item.y] = item.fuelCost;
+		}
+		for () {
+			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
+			//		choicePoint = least getTotalDistance in queue, & delete
+			MyPoint choicePoint = queue.poll();
+			int[][] adjFour = {	{choicePoint.x,choicePoint.y+1},
+									{choicePoint.x,choicePoint.y-1},
+									{choicePoint.x+1,choicePoint.y},
+									{choicePoint.x-1,choicePoint.y}};
+			//		for (x,y) in [(x+1,y), (x-1,y), (x,y+1), (x,y-1)]:
+			for (int[] pair : adjFour) {
+				int xmine = pair[0];
+				int ymine = pair[1];
+				if (isXYOutsideImage(xmine, ymine)) { continue; }
+			//			if isOutsideImage: continue
+			//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
+			//			If proposedCost < getTotalDistance(x,y)://TODO: INF trouble
+			//				If (x,y) in totalDistancesRegion:
+			//					throw Exception, Dijkstra understanding is faulty for shortest paths held in totalDistancesRegion
+			//				Else if (x,y) in queue:
+			//					throw Exception, Dijkstra understanding is faulty for shortest paths held in queue
+			//				Else (therefore, totalDistancesRegion[x,y] == INF):
+			//					totalDistancesRegion[(x,y)] = getTotalDistance((x,y)))
+			//					add (x,y) to the queue at this totalDistance
+			//			Else: Do nothing.
+			//					No need to update any distance.
+			//					Anything needing added to the queue would have had INF distance.
+			}
+			return distances, queue;
+			// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
+		}
+	}
+
+	private boolean isXYOutsideImage(int x, int y) {
+		boolean failure = (x < 0 || y < 0 || x >= width || y >= height);
+		return failure;
 	}
 
 	//This is not needed
@@ -509,7 +486,7 @@ public class MLPaintPanel extends JComponent
 	 * 	Maydo: Do not allow a suggestion outside of view
 	 * 	Maydo: Get connected components and for each get a lowest classifier score
 	 */
-	private pythonList getDijkstraSeedPoints() {
+	private ArrayList<MyPoint> getDijkstraSeedPoints() {
 		WritableRaster rawData = freshPaint.getRaster();
 		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
 		for (int x = 0; x < width; x++) {
@@ -517,11 +494,14 @@ public class MLPaintPanel extends JComponent
 				int index = rawData.getSample(x, y, 0);// 0 or 1
 				if (index == FRESH_POS) {
 					double score0 = getClassifierProbNeg(x,y);
-					smallest = new MyPoint(score,x,y)
+					if (score0 < smallest.fuelCost) {
+						smallest = new MyPoint(score0,x,y);
+					}
 				}
 			}
 		}
-		pythonList rr = [smallest];
+		ArrayList<MyPoint> rr = new ArrayList<MyPoint>();
+		rr.add(smallest);
 		return rr;
 	}
 
