@@ -420,7 +420,7 @@ public class MLPaintPanel extends JComponent
 			queue.add(item);
 			distances[item.x][item.y] = item.fuelCost;
 		}
-		int reps = (int) (freshPaintPositives*1.5);
+		int reps = (int) (freshPaintNumPositives*1.5);
 		for (int i=0; i < reps; i++) {
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
@@ -487,15 +487,16 @@ public class MLPaintPanel extends JComponent
 			// TODO: If it's already labeled in the real image, don't even consider it.
 			// load writable Raster, get if it's positive or negative set distance to +INF
 			// MAYDO: If it's off the affine view screen, don't label it.
-		// get the feature vector
-		// get the classifier score
-		// getSoftScoreDistanceTransform
-		// return rr;
+		double out = getClassifierProbNeg(x,y);
+		out = getSoftScoreDistanceTransform(out);
+		return out;
 	}
 
 	private double getSoftScoreDistanceTransform(double softScore) {  //
-		double rr = softScore;
-		return rr;
+		double out = softScore;
+		out *= 10.0;
+		out *= out;
+		return out;
 	}
 
 	/** Return a bunch of seed MyPoints with 0 initialization distance
