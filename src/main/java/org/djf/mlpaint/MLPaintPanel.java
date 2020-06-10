@@ -74,7 +74,7 @@ public class MLPaintPanel extends JComponent
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
 	private BufferedImage freshPaint;
-	private int freshPaintPositives;//GROK: run by classifier
+	private int freshPaintNumPositives;//GROK: run by classifier
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
 	public double brushRadius = 10.0;
@@ -198,8 +198,8 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() && !e.isAltDown()) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
-			PriorityQueue queue = runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
-			visualizeQueue(queue);
+			PriorityQueue<MyPoint> queue = runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			visualizeQueue(queue, true);
 		}
 		mousePrev = null;
 		repaint();
@@ -292,7 +292,7 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	/**GROC: ?Paints the image, freshpaint, and possibly classifier output, to the screen.
+	/**Paints the image, freshpaint, and possibly classifier output, to the screen.
 	 *
 	 */
 	@Override
@@ -307,7 +307,10 @@ public class MLPaintPanel extends JComponent
 			g2.drawImage(classifierOutput, 0, 0, null);
 		}
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		// add frame to see limit, even if indistinguishable from backgound
+		if (suggestionOutlines != null) {
+			g2.drawImage(suggestionOutlines, 0,0,null); //GROC
+		}
+		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
 		g2.drawRect(0, 0, width, height);
 		g2.dispose();
@@ -342,7 +345,7 @@ public class MLPaintPanel extends JComponent
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 		int npos = positives.size();
 		int nneg = negatives.size();
-		freshPaintPositives = npos;//GROK
+		freshPaintNumPositives = npos;//GROK
 		t = SwingApp.reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint", 
 				npos, nneg, width, height);
 		if (npos < 30) {// not enough
@@ -552,37 +555,18 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
-	private BufferedImage visualizeQueue(PriorityQueue queue) {
-		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY);
-		WritableRaster raster = out.getRaster(); SUGGESTION_TRANSPARENT, SUGGESTION_EDGE
-		suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
-		for edgePoint in queue:
-			int index = 0;
-			raster.setSample(edgePoint.x, edgePoint.y, index);
-			raster.setSample(edgePoint.x+1, edgePoint.y, index);
-			raster.setSample(edgePoint.x-1, edgePoint.y, index);
-			raster.setSample(edgePoint.x, edgePoint.y+1, index);
-			raster.setSample(edgePoint.x, edgePoint.y-1, index);
+	private void visualizeQueue(PriorityQueue<MyPoint> queue, boolean isToInitialize) {
+		if (isToInitialize) {
+			suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
 		}
-		//Todo
-		return out;
+		WritableRaster raster = suggestionOutlines.getRaster();
+		for (MyPoint edgePoint: queue) {
+			raster.setSample(edgePoint.x,      edgePoint.y,  0,  SUGGESTION_EDGE); //GROC: What's the zero about?
+			raster.setSample(edgePoint.x+1, edgePoint.y,  0,  SUGGESTION_EDGE);
+			raster.setSample(edgePoint.x-1, edgePoint.y,  0,  SUGGESTION_EDGE);
+			raster.setSample(edgePoint.x,   edgePoint.y+1,0,  SUGGESTION_EDGE);
+			raster.setSample(edgePoint.x,   edgePoint.y-1,0,  SUGGESTION_EDGE);
+		}
+		repaint();
 	}
 }
-		int index = isNegative ? FRESH_NEG : FRESH_POS;
-		Ellipse2D brush = new Ellipse2D.Double(
-		e.getX() - brushRadius,
-		e.getY() - brushRadius,
-		2*brushRadius, 2*brushRadius);
-		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
-		Color color = new Color(cm.getRGB(index));
-		Graphics2D g = (Graphics2D) freshPaint.getGraphics();
-		g.setColor(color);
-		try {
-		AffineTransform inverse = view.createInverse();
-		g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
-		g.fill(brush);
-		g.dispose();
-		repaint();
-		} catch (NoninvertibleTransformException e1) {// won't happen
-		e1.printStackTrace();
-		}
