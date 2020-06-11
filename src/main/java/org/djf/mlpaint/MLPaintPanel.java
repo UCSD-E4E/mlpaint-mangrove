@@ -76,7 +76,7 @@ public class MLPaintPanel extends JComponent
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
 	private BufferedImage freshPaint;
-	private int freshPaintNumPositives;//GROK: run by classifier
+	private Integer freshPaintNumPositives = null;//GROK: run by classifier
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
 	public double brushRadius = 10.0;
@@ -128,8 +128,10 @@ public class MLPaintPanel extends JComponent
 					"The extra layer size does not match the image size.");
 		});
 		distances = new double[width][height];
+		suggestionOutlines = null;
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		clearFreshPaintAndSuggestions();
+		freshPaintNumPositives = null;
 		classifier = null;
 		classifierOutput = null;
 		setPreferredSize(new Dimension(width, height));
@@ -503,7 +505,7 @@ public class MLPaintPanel extends JComponent
 		rawdata = freshPaint.getRaster();
 		int freshPaintVal = rawdata.getSample(x,y,0);
 		if (freshPaintVal == FRESH_POS){
-			return EDGE_DISTANCE_FRESH_POS;
+			//return EDGE_DISTANCE_FRESH_POS;
 		} else if (freshPaintVal == FRESH_NEG){
 			return Double.POSITIVE_INFINITY;
 		}
