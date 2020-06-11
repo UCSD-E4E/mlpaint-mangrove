@@ -570,11 +570,14 @@ public class MLPaintPanel extends JComponent
 		}
 		WritableRaster raster = suggestionOutlines.getRaster();
 		for (MyPoint edgePoint: queue) {
-			raster.setSample(edgePoint.x,      edgePoint.y,  0,  SUGGESTION_EDGE); //GROC: What's the zero about?
-			raster.setSample(edgePoint.x+1, edgePoint.y,  0,  SUGGESTION_EDGE);
-			raster.setSample(edgePoint.x-1, edgePoint.y,  0,  SUGGESTION_EDGE);
-			raster.setSample(edgePoint.x,   edgePoint.y+1,0,  SUGGESTION_EDGE);
-			raster.setSample(edgePoint.x,   edgePoint.y-1,0,  SUGGESTION_EDGE);
+			int x = edgePoint.x;
+			int y = edgePoint.y;
+			int[][] neighbors = { {x,y}, {x+1,y}, {x-1,y}, {x,y+1}, {x,y-1} };
+			for (int[] pair: neighbors) {
+				if (!isXYOutsideImage(pair[0],pair[1])) {
+				raster.setSample(pair[0], pair[1], 0, SUGGESTION_EDGE);
+				}
+			}
 		}
 		repaint();
 	}
