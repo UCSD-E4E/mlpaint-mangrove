@@ -127,7 +127,7 @@ public class MLPaintPanel extends JComponent
 		});
 		distances = new double[width][height];
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
-		clearFreshPaint();
+		clearFreshPaintAndSuggestions();
 		classifier = null;
 		classifierOutput = null;
 		setPreferredSize(new Dimension(width, height));
@@ -139,11 +139,19 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
-	public void clearFreshPaint() {
+	public void clearFreshPaintAndSuggestions() {
 		WritableRaster rawdata = freshPaint.getRaster();
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				rawdata.setSample(x, y, 0, FRESH_UNLABELED);
+			}
+		}
+		if (suggestionOutlines != null) {
+			rawdata = suggestionOutlines.getRaster();
+			for (int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					rawdata.setSample(x, y, 0, SUGGESTION_TRANSPARENT);
+				}
 			}
 		}
 		repaint();

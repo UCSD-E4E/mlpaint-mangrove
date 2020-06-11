@@ -117,7 +117,7 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Label proposed as positive +|control 1", this::label),
 				newMenuItem("Label proposed as negative -|control 2", this::label),
 				newMenuItem("Label proposed as unlabeled|control 0", this::label),
-				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaint()),
+				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
 				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.brushRadius *= 1.5),
 				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.5),
 				newMenuItem("Reset brush size",   (name,ev) -> mlp.brushRadius = 10),
