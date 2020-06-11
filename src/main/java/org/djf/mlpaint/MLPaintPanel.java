@@ -14,6 +14,7 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
@@ -39,17 +40,19 @@ import smile.classification.SoftClassifier;
  */
 public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
-	
+
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
 	public static final int UNLABELED = 0;
 	public static final int POSITIVE = 1;
 	public static final int NEGATIVE = 2;
 	// possibly up to 255 different labels, as needed
-	
+	public static final int POS_DARKNESS = 125;
+	public static final int NEG_DARKNESS = 0;
+
 	// *freshPaint* pixel index codes (0 to 3 maximum)
 	private static final int FRESH_UNLABELED = 0;
 	private static final int FRESH_POS = 1;
-	private static final int FRESH_NEG = 2; 
+	private static final int FRESH_NEG = 2;
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
 
 	// label suggestion index codes (0 or 1 maximum)
@@ -64,15 +67,15 @@ public class MLPaintPanel extends JComponent
 	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
 	int width, height;
 
-	/** extra image layers:  filename & image.  Does not contain master image or labels layers. 
+	/** extra image layers:  filename & image.  Does not contain master image or labels layers.
 	 * Might have computed layers someday.
 	 */
 	public LinkedHashMap<String, BufferedImage> extraLayers;
 
 	/** matching image labels: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
-	
-	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive. 
+
+	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
 	 * Colors for display are transparent & transparent-green, currently.
 	 */
 	private BufferedImage freshPaint;
@@ -82,34 +85,34 @@ public class MLPaintPanel extends JComponent
 	public double brushRadius = 10.0;
 
 	private SoftClassifier<double[]> classifier;
-	
+
 	/** classifier output image, grayscale */
 	private BufferedImage classifierOutput;
 
 	private BufferedImage suggestionOutlines;
 	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
-	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation. 
+	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
 	 */
 	private double[][] distances;
-	
+
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
 	public BufferedImage proposed;
 
 
 	/** map from screen frame of reference down to image "world coordinates" frame of reference, so we can pan & zoom */
 	private AffineTransform view = new AffineTransform();
-	
+
 	/** previous mouse event when drawing/dragging */
 	private MouseEvent mousePrev;
-	
 
-	
+
+
 	public MLPaintPanel() {
 		super();
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
-		//addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
+		addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
 		setOpaque(true);
 		setFocusable(true);// allow key events
 	}
@@ -137,7 +140,7 @@ public class MLPaintPanel extends JComponent
 		setPreferredSize(new Dimension(width, height));
 		resetView();
 	}
-	
+
 	public void resetView() {
 		view = new AffineTransform();
 		repaint();
@@ -160,17 +163,17 @@ public class MLPaintPanel extends JComponent
 		}
 		repaint();
 	}
-	
-	
+
+
 
 	///////   Java Swing GUI code / callbacks
 
-	
+
 	@Override
 	public void mouseClicked(MouseEvent e) {
 		System.out.printf("MouseClick %s\n", e.toString());
 	}
-	
+
 	@Override
 	public void mousePressed(MouseEvent e) {
 		System.out.printf("MousePress %s\n", e.toString());
@@ -193,7 +196,7 @@ public class MLPaintPanel extends JComponent
 			double dx = e.getPoint().getX() - mousePrev.getPoint().getX();
 			double dy = e.getPoint().getY() - mousePrev.getPoint().getY();
 			view.preConcatenate(AffineTransform.getTranslateInstance(dx, dy));
-			
+
 		} else {// default
 			// put paint down
 			brushFreshPaint(e, e.isShiftDown());
@@ -246,10 +249,19 @@ public class MLPaintPanel extends JComponent
 	public void keyTyped(KeyEvent e) {
 		System.out.printf("KeyTyped %s\n", e);// repeats if held, for normal typing, not function keys
 		char ch = e.getKeyChar();
+		actOnChar(ch);
+	}
+
+	public void actOnChar(char ch) {
 		if (Character.isDigit(ch)) {
 			brushRadius = 5 * (ch - '0' + 1);// somehow translate it
 			// show the user too
 			System.out.printf("paintbrush radius: %s\n", brushRadius);
+		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
+			// That way we can add labels interactively in the GUI by changing the keys variable.
+			writeSuggestionToLabels(NEGATIVE);
+		} else if (ch == 'm'){
+			writeSuggestionToLabels(POSITIVE);
 		}
 	}
 
@@ -320,7 +332,20 @@ public class MLPaintPanel extends JComponent
 		}
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
 		if (suggestionOutlines != null) {
-			g2.drawImage(suggestionOutlines, 0,0,null); //GROC
+			g2.drawImage(suggestionOutlines, 0, 0, null); //GROC
+		}
+		WritableRaster labels0 = labels.getRaster();
+		for (int x=0; x<width; x++) { //GROC: It doesn't make sense to make an image and then use it as a 2D matrix.
+			for (int y=0; y<height; y++) {
+				int label0Val = labels0.getSample(x,y,0);
+				if (label0Val == POSITIVE){
+					g2.setColor(new Color(POS_DARKNESS, POS_DARKNESS, POS_DARKNESS, 128)); //gray transparent
+					g2.draw(new Line2D.Double(x, y, x, y));
+				} else if (label0Val == NEGATIVE) {
+					g2.setColor(new Color(NEG_DARKNESS, NEG_DARKNESS, NEG_DARKNESS, 128)); //black transparent
+					g2.draw(new Line2D.Double(x, y, x, y));
+				}
+			}
 		}
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
@@ -465,7 +490,6 @@ public class MLPaintPanel extends JComponent
 			//					No need to update any distance.
 			//					Anything needing added to the queue would have had INF distance.
 			}
-			// How would we display the idea? Paint in the queue points with vibrant colors, maybe some thickness.
 		}
 		return queue;
 	}
@@ -517,8 +541,7 @@ public class MLPaintPanel extends JComponent
 
 	private double getSoftScoreDistanceTransform(double softScore) {  //
 		double out = softScore;
-		out *= 10.0;
-		out *= out;
+		out = Math.pow(out, 1.5);
 		return out;
 	}
 
@@ -595,6 +618,24 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
+		repaint();
+	}
+
+	private void writeSuggestionToLabels(int labelIndex) {
+		System.out.println("writeSuggestionToLabels called \n");
+		if (suggestionOutlines == null || distances == null || labels == null) {
+			return;
+		}
+		double thresholdDistance = Double.POSITIVE_INFINITY;
+		WritableRaster labels0 = labels.getRaster();
+		for (int x=0; x<width; x++){
+			for (int y=0; y<height; y++){
+				if (distances[x][y] < thresholdDistance) {
+					labels0.setSample( x, y, 0, labelIndex);
+				}
+			}
+		}
+		suggestionOutlines = null;
 		repaint();
 	}
 }

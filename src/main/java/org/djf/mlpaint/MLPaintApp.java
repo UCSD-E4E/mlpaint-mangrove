@@ -69,6 +69,8 @@ public class MLPaintApp extends SwingApp {
 		JButton b1 = new JButton("+");
 		b0.addActionListener(ev -> status("Ahhhh. Thanks."));
 		b1.addActionListener(ev -> status("Slap!"));
+		b0.getInputMap().put(KeyStroke.getKeyStroke("SPACE"), "none");//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
+		b1.getInputMap().put(KeyStroke.getKeyStroke("SPACE"), "none");
 
 		Box controls = Box.createVerticalBox();
 		controls.add(b1);
@@ -114,8 +116,8 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
-				newMenuItem("Label proposed as positive +|control 1", this::label),
-				newMenuItem("Label proposed as negative -|control 2", this::label),
+				newMenuItem("Label proposed as positive +  m", (name,ev) -> mlp.actOnChar('m')), //MAYDO: UI key choice
+				newMenuItem("Label proposed as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
 				newMenuItem("Label proposed as unlabeled|control 0", this::label),
 				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
 				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.brushRadius *= 1.5),
