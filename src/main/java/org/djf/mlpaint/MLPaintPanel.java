@@ -56,7 +56,9 @@ public class MLPaintPanel extends JComponent
 	private static final int SUGGESTION_TRANSPARENT = 0;
 	private static final int SUGGESTION_EDGE = 1;
 	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHABLUE};
-	
+
+	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
+
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
 	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
@@ -428,7 +430,7 @@ public class MLPaintPanel extends JComponent
 			queue.add(item);
 			distances[item.x][item.y] = item.fuelCost;
 		}
-		int reps = (int) (freshPaintNumPositives*1.5);
+		int reps = (int) (freshPaintNumPositives*2);
 		for (int i=0; i < reps; i++) {
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
@@ -487,13 +489,24 @@ public class MLPaintPanel extends JComponent
 		}
 	}*/
 
-	/* This function might be changed... */
+	/* This function gets the cost of traversing a single pixel——the classifier score modified by labels.
+	*   	Warning: The cost could be infinite. */
 	private double getEdgeDistance(int x, int y){
-			// MAYDO: Get WritableRaster rawdata freshpaint
-			// if it's negative, return +INF //be careful young man with adding INF to INF
-			// if it's positive, return 0 or 1*10^-6, that is, MIN_DISTANCE_VALUE
-			// TODO: If it's already labeled in the real image, don't even consider it.
-			// load writable Raster, get if it's positive or negative set distance to +INF
+			// If the coordinates are already labeled in the real image, don't even consider it.
+		WritableRaster rawdata = labels.getRaster();
+		int labelsVal = rawdata.getSample(x,y,0);
+		if (labelsVal != UNLABELED){
+			return Double.POSITIVE_INFINITY;
+		}
+			// If freshPaint positive, return  MIN_DISTANCE_VALUE, probably 0.
+			// If freshPaint negative, return +INF //TODO:be careful young man with adding INF to INF
+		rawdata = freshPaint.getRaster();
+		int freshPaintVal = rawdata.getSample(x,y,0);
+		if (freshPaintVal == FRESH_POS){
+			return EDGE_DISTANCE_FRESH_POS;
+		} else if (freshPaintVal == FRESH_NEG){
+			return Double.POSITIVE_INFINITY;
+		}
 			// MAYDO: If it's off the affine view screen, don't label it.
 		double out = getClassifierProbNeg(x,y);
 		out = getSoftScoreDistanceTransform(out);
@@ -572,10 +585,11 @@ public class MLPaintPanel extends JComponent
 		for (MyPoint edgePoint: queue) {
 			int x = edgePoint.x;
 			int y = edgePoint.y;
-			int[][] neighbors = { {x,y}, {x+1,y}, {x-1,y}, {x,y+1}, {x,y-1} };
-			for (int[] pair: neighbors) {
-				if (!isXYOutsideImage(pair[0],pair[1])) {
-				raster.setSample(pair[0], pair[1], 0, SUGGESTION_EDGE);
+			for (int i=x-1;i<x+2; i++){
+				for (int j=y-1; j<y+2; j++){
+					if (!isXYOutsideImage(i,j)) {
+						raster.setSample( i,j, 0, SUGGESTION_EDGE);
+					}
 				}
 			}
 		}
