@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -15,6 +16,7 @@ import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.stream.ImageInputStream;
 
 import com.google.common.base.Preconditions;
+import org.djf.mlpaint.MyPoint;
 
 /** Swing Utilities.
  * 
@@ -69,7 +71,14 @@ public class SwingUtil {
 		throw new IOException("Couldn't parse the file: " + imageFile);
 	}
 
-	
+	public static void fillImage(BufferedImage img, int intVal) {
+		WritableRaster rawData = img.getRaster();
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getHeight(); y++) {
+				rawData.setSample(x, y, 0, intVal);
+			}
+		}
+	}
 	
 	
 	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram

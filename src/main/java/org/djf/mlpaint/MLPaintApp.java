@@ -25,6 +25,7 @@ import org.djf.util.SwingApp;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.MoreFiles;
+import org.djf.util.SwingUtil;
 
 
 /** Magic Label Paint ~ ML Paint
@@ -67,10 +68,10 @@ public class MLPaintApp extends SwingApp {
 		// WEST
 		JButton b0 = new JButton("-");
 		JButton b1 = new JButton("+");
-		b0.addActionListener(ev -> status("Ahhhh. Thanks."));
-		b1.addActionListener(ev -> status("Slap!"));
-		b0.getInputMap().put(KeyStroke.getKeyStroke("SPACE"), "none");//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
-		b1.getInputMap().put(KeyStroke.getKeyStroke("SPACE"), "none");
+		b0.addActionListener(ev -> adjustPower(-0.25));
+		b1.addActionListener(ev -> adjustPower(0.25));
+		b0.setFocusable(false);
+		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
 
 		Box controls = Box.createVerticalBox();
 		controls.add(b1);
@@ -88,13 +89,17 @@ public class MLPaintApp extends SwingApp {
 		add(status, BorderLayout.SOUTH);
 	}
 
+	private void adjustPower(double v) {
+		mlp.scorePower += v;
+		status("Score Power = %.2f", mlp.scorePower);
+	}
+
 	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
 	private void makeBehavior() {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
-		showClassifier.addActionListener(ev -> {
-			if (mlp != null) {
-				mlp.setShowClassifierOutput(showClassifier.isSelected());
-			}
+		showClassifier.addActionListener(event -> {
+			mlp.showClassifier.set(showClassifier.isSelected());
+			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifier.get());
 		});
 
 	}
@@ -119,7 +124,7 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Label proposed as positive +  m", (name,ev) -> mlp.actOnChar('m')), //MAYDO: UI key choice
 				newMenuItem("Label proposed as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
 				newMenuItem("Label proposed as unlabeled|control 0", this::label),
-				newMenuItem("Clear proposed|DELETE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
+				newMenuItem("Clear proposed|BACK_SPACE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
 				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.brushRadius *= 1.5),
 				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.5),
 				newMenuItem("Reset brush size",   (name,ev) -> mlp.brushRadius = 10),
@@ -172,6 +177,7 @@ public class MLPaintApp extends SwingApp {
 				currentImageFile = file.toPath();
 			} else if (file.toString().contains("_labels")) {
 				labels = img;
+				System.out.println("We got a labels file.");
 			} else {
 				extraLayers.put(file.getName(), img);
 			}
@@ -182,6 +188,7 @@ public class MLPaintApp extends SwingApp {
 		// if no previously existing labels loaded, create an unlabeled layer of same size.  Initially all 0's == UNLABELED
 		if (labels == null) {
 			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+			SwingUtil.fillImage(labels, mlp.UNLABELED);
 			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with just 4 or 16 colors));
 		}
 
@@ -195,11 +202,12 @@ public class MLPaintApp extends SwingApp {
 
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
-		// For now: compressed PNG is good
+		// For now: compressed TIFF is good
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + ".png";
 		Path outfile = directory.resolve(filename);
-		ImageIO.write(mlp.labels, "png", outfile.toFile());
+		ImageIO.write(mlp.labels, "tiff", outfile.toFile());
 		status("Saved %d x %d labels to %s", mlp.width, mlp.height, outfile);
+		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
 	}
 
 	private void exit(String command, ActionEvent ev) {

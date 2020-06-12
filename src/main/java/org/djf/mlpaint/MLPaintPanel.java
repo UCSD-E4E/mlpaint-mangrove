@@ -24,6 +24,7 @@ import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
 
+import javafx.beans.property.SimpleBooleanProperty;
 import org.djf.util.SwingApp;
 import org.djf.util.SwingUtil;
 
@@ -34,6 +35,8 @@ import com.google.common.collect.Streams;
 import smile.classification.LogisticRegression;
 import smile.classification.SoftClassifier;
 
+import static org.djf.util.SwingApp.reportTime;
+
 
 /** Magic Label Paint panel.
  *   This panel rests within the MLPaintApp.
@@ -42,12 +45,13 @@ public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
-	public static final int UNLABELED = 0;
-	public static final int POSITIVE = 1;
-	public static final int NEGATIVE = 2;
+	public static final int UNLABELED = 255;
+	public static final int POSITIVE = 200;
+	public static final int NEGATIVE = 0;
 	// possibly up to 255 different labels, as needed
 	public static final int POS_DARKNESS = 125;
 	public static final int NEG_DARKNESS = 0;
+	public static final int LABEL_OPACITY = 80;
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
 	private static final int FRESH_UNLABELED = 0;
@@ -94,6 +98,7 @@ public class MLPaintPanel extends JComponent
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
 	 */
 	private double[][] distances;
+	public double scorePower = 1.0;
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
 	public BufferedImage proposed;
@@ -105,6 +110,8 @@ public class MLPaintPanel extends JComponent
 	/** previous mouse event when drawing/dragging */
 	private MouseEvent mousePrev;
 
+	/** clients can toggle this property and we automatically repaint() */
+	public final SimpleBooleanProperty showClassifier = new SimpleBooleanProperty();
 
 
 	public MLPaintPanel() {
@@ -115,6 +122,7 @@ public class MLPaintPanel extends JComponent
 		addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
 		setOpaque(true);
 		setFocusable(true);// allow key events
+		showClassifier.addListener(event -> repaint());
 	}
 
 	public void resetData(BufferedImage masterImage, BufferedImage labels2,
@@ -143,24 +151,13 @@ public class MLPaintPanel extends JComponent
 
 	public void resetView() {
 		view = new AffineTransform();
+		showClassifier.set(false);
 		repaint();
 	}
 
 	public void clearFreshPaintAndSuggestions() {
-		WritableRaster rawdata = freshPaint.getRaster();
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
-				rawdata.setSample(x, y, 0, FRESH_UNLABELED);
-			}
-		}
-		if (suggestionOutlines != null) {
-			rawdata = suggestionOutlines.getRaster();
-			for (int x = 0; x < width; x++) {
-				for (int y = 0; y < height; y++) {
-					rawdata.setSample(x, y, 0, SUGGESTION_TRANSPARENT);
-				}
-			}
-		}
+		SwingUtil.fillImage(freshPaint, FRESH_UNLABELED);
+		SwingUtil.fillImage(suggestionOutlines, SUGGESTION_TRANSPARENT);
 		repaint();
 	}
 
@@ -213,8 +210,9 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() && !e.isAltDown()) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
+			classifierOutput = runClassifier();
 			PriorityQueue<MyPoint> queue = runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
-			visualizeQueue(queue, true);
+			visualizeQueue(queue, true); //TODO: make these two lines a public function
 		}
 		mousePrev = null;
 		repaint();
@@ -325,9 +323,13 @@ public class MLPaintPanel extends JComponent
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
 		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
+		if (image == null) {
+			g2.dispose();
+			return;
+		}
 		g2.transform(view);
 		g2.drawImage(image, 0, 0, null);
-		if (classifierOutput != null) {// MAYDO: instead have a transparency slider??  That'd be cool.
+		if (showClassifier.get()) {// MAYDO: instead have a transparency slider??  That'd be cool.
 			g2.drawImage(classifierOutput, 0, 0, null);
 		}
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
@@ -339,11 +341,13 @@ public class MLPaintPanel extends JComponent
 			for (int y=0; y<height; y++) {
 				int label0Val = labels0.getSample(x,y,0);
 				if (label0Val == POSITIVE){
-					g2.setColor(new Color(POS_DARKNESS, POS_DARKNESS, POS_DARKNESS, 128)); //gray transparent
+					g2.setColor(new Color(POS_DARKNESS, POS_DARKNESS, POS_DARKNESS, LABEL_OPACITY)); //gray transparent
 					g2.draw(new Line2D.Double(x, y, x, y));
+					System.out.println("Draw positive.");
 				} else if (label0Val == NEGATIVE) {
-					g2.setColor(new Color(NEG_DARKNESS, NEG_DARKNESS, NEG_DARKNESS, 128)); //black transparent
+					g2.setColor(new Color(NEG_DARKNESS, NEG_DARKNESS, NEG_DARKNESS, LABEL_OPACITY)); //black transparent
 					g2.draw(new Line2D.Double(x, y, x, y));
+					System.out.println("Draw negative.");
 				}
 			}
 		}
@@ -383,7 +387,7 @@ public class MLPaintPanel extends JComponent
 		int npos = positives.size();
 		int nneg = negatives.size();
 		freshPaintNumPositives = npos;//GROK
-		t = SwingApp.reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint", 
+		t = reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint",
 				npos, nneg, width, height);
 		if (npos < 30) {// not enough
 			return;// silently return
@@ -412,7 +416,7 @@ public class MLPaintPanel extends JComponent
 				.toArray();
 		
 		// train the SVM or whatever model
-		t = SwingApp.reportTime(t, "converted data to train classifier: %d rows x %d features, %.1f%% positive", 
+		t = reportTime(t, "converted data to train classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
 		int maxIters = 500;
 		double C = 1.0;//TODO
@@ -421,7 +425,7 @@ public class MLPaintPanel extends JComponent
 		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
 		// classifier = SVM.fit(fvs, ylabels, C, tolerance);
 		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
-		t = SwingApp.reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive", 
+		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
 		
 		/*if (classifierOutput != null) {
@@ -529,7 +533,7 @@ public class MLPaintPanel extends JComponent
 		rawdata = freshPaint.getRaster();
 		int freshPaintVal = rawdata.getSample(x,y,0);
 		if (freshPaintVal == FRESH_POS){
-			//return EDGE_DISTANCE_FRESH_POS;
+			return EDGE_DISTANCE_FRESH_POS;
 		} else if (freshPaintVal == FRESH_NEG){
 			return Double.POSITIVE_INFINITY;
 		}
@@ -541,7 +545,8 @@ public class MLPaintPanel extends JComponent
 
 	private double getSoftScoreDistanceTransform(double softScore) {  //
 		double out = softScore;
-		out = Math.pow(out, 1.5);
+		out = Math.pow(out, scorePower);
+		out += 1;
 		return out;
 	}
 
@@ -551,11 +556,13 @@ public class MLPaintPanel extends JComponent
 	 */
 	private ArrayList<MyPoint> getDijkstraSeedPoints() {
 		WritableRaster rawData = freshPaint.getRaster();
+		WritableRaster labels0 = labels.getRaster();
 		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {						//& fill the queue with fresh paint locations @ fuel cost 0
 				int index = rawData.getSample(x, y, 0);// 0 or 1
-				if (index == FRESH_POS) {
+				int driedLabel = labels0.getSample(x,y,0);
+				if (index == FRESH_POS && driedLabel == UNLABELED) {
 					double score0 = getClassifierProbNeg(x,y);
 					if (score0 < smallest.fuelCost) {
 						smallest = new MyPoint(score0,x,y);
@@ -580,6 +587,7 @@ public class MLPaintPanel extends JComponent
 
 
 	private BufferedImage runClassifier() {
+		long t = System.currentTimeMillis();
 		Preconditions.checkNotNull(classifier, "Must put positive paint down first");
 		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
 		WritableRaster raster = out.getRaster();
@@ -590,16 +598,8 @@ public class MLPaintPanel extends JComponent
 				raster.setSample(x, y, 0, index);
 			}
 		});
+		reportTime(t,"Computed classifier on whole image.");
 		return out;
-	}
-
-	public void setShowClassifierOutput(boolean show) {
-		if (show && classifier != null) {
-			classifierOutput = runClassifier();
-		} else {
-			classifierOutput = null;
-		}
-		repaint();
 	}
 
 	private void visualizeQueue(PriorityQueue<MyPoint> queue, boolean isToInitialize) {
