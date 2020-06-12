@@ -157,7 +157,9 @@ public class MLPaintPanel extends JComponent
 
 	public void clearFreshPaintAndSuggestions() {
 		SwingUtil.fillImage(freshPaint, FRESH_UNLABELED);
-		SwingUtil.fillImage(suggestionOutlines, SUGGESTION_TRANSPARENT);
+		if (suggestionOutlines != null) {
+			SwingUtil.fillImage(suggestionOutlines, SUGGESTION_TRANSPARENT);
+		}
 		repaint();
 	}
 
