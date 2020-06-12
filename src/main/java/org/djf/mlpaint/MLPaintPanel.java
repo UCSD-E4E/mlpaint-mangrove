@@ -345,11 +345,9 @@ public class MLPaintPanel extends JComponent
 				if (label0Val == POSITIVE){
 					g2.setColor(new Color(POS_DARKNESS, POS_DARKNESS, POS_DARKNESS, LABEL_OPACITY)); //gray transparent
 					g2.draw(new Line2D.Double(x, y, x, y));
-					System.out.println("Draw positive.");
 				} else if (label0Val == NEGATIVE) {
 					g2.setColor(new Color(NEG_DARKNESS, NEG_DARKNESS, NEG_DARKNESS, LABEL_OPACITY)); //black transparent
 					g2.draw(new Line2D.Double(x, y, x, y));
-					System.out.println("Draw negative.");
 				}
 			}
 		}

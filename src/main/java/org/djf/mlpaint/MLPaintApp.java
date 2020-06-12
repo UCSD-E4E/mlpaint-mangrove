@@ -109,7 +109,7 @@ public class MLPaintApp extends SwingApp {
 	 */
 	private JMenuBar makeMenus() {				 						//MAYDO: Allow ctrl and command, maybe ever same
 		JMenu file = newMenu("File",
-				newMenuItem("Open image...|control O", this::openImage),
+				newMenuItem("Open image, labels...|control O", this::openImage),
 				newMenuItem("Save labels...|control S", this::saveLabels),
 				newMenuItem("Exit", this::exit),
 				null);
@@ -143,7 +143,7 @@ public class MLPaintApp extends SwingApp {
 
 	private void openImage(String command, ActionEvent ev) throws IOException {
 		JFileChooser jfc = new JFileChooser();
-		jfc.setDialogTitle("Open images...");
+		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
 		
 		// currently the user selects all the layers to load
@@ -172,6 +172,7 @@ public class MLPaintApp extends SwingApp {
 		for (File file: jfc.getSelectedFiles()) {
 			BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath());
+			System.out.println(file.toString());
 			if (file.toString().contains("_RGB")) {
 				image = img;
 				currentImageFile = file.toPath();
@@ -203,9 +204,11 @@ public class MLPaintApp extends SwingApp {
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
 		// For now: compressed TIFF is good
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + ".png";
+		String extension = ".tif";
+		String formatName = "tiff";
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + extension;
 		Path outfile = directory.resolve(filename);
-		ImageIO.write(mlp.labels, "tiff", outfile.toFile());
+		ImageIO.write(mlp.labels, formatName, outfile.toFile());
 		status("Saved %d x %d labels to %s", mlp.width, mlp.height, outfile);
 		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
 	}
