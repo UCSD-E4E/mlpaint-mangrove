@@ -1,10 +1,6 @@
 package org.djf.mlpaint;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -20,6 +16,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.util.*;
+import java.util.List;
 import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
@@ -48,6 +45,7 @@ public class MLPaintPanel extends JComponent
 	public static final int UNLABELED = 255;
 	public static final int POSITIVE = 200;
 	public static final int NEGATIVE = 0;
+	public static final int NO_DATA = 1;
 	// possibly up to 255 different labels, as needed
 	public static final int POS_DARKNESS = 125;
 	public static final int NEG_DARKNESS = 0;
@@ -65,6 +63,7 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHABLUE};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
+	private static final double QUEUE_GROWTH = 0.2;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -86,7 +85,7 @@ public class MLPaintPanel extends JComponent
 	private Integer freshPaintNumPositives = null;//GROK: run by classifier
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
-	public double brushRadius = 10.0;
+	public double brushRadius = radiusFromChDigit('1');
 
 	private SoftClassifier<double[]> classifier;
 
@@ -98,7 +97,9 @@ public class MLPaintPanel extends JComponent
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
 	 */
 	private double[][] distances;
-	public double scorePower = 1.0;
+	public double scorePower = 3.0;
+	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
+	public int queueBoundsIdx;
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
 	public BufferedImage proposed;
@@ -213,8 +214,9 @@ public class MLPaintPanel extends JComponent
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
 			classifierOutput = runClassifier();
-			PriorityQueue<MyPoint> queue = runDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
-			visualizeQueue(queue, true); //TODO: make these two lines a public function
+			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			queueBoundsIdx = listQueues.size()-1;
+			visualizeQueue(queueBoundsIdx, true);
 		}
 		mousePrev = null;
 		repaint();
@@ -228,12 +230,26 @@ public class MLPaintPanel extends JComponent
 	@Override
 	public void mouseEntered(MouseEvent e) {
 		// System.out.printf("MouseEntered %s\n", e.toString());
+		setCursorToMarkerAtRightSize();
 	}
 
 	@Override
 	public void mouseExited(MouseEvent e) {
 		// System.out.printf("MouseExited %s\n", e.toString());
+		setMarkerToCursor();
 	}
+
+	public void setCursorToMarkerAtRightSize() {
+		setCursor(
+				new Cursor(Cursor.CROSSHAIR_CURSOR));
+
+	}
+
+	public void setMarkerToCursor() {
+		setCursor(
+				new Cursor(Cursor.DEFAULT_CURSOR));
+	}
+
 
 	@Override
 	public void keyPressed(KeyEvent e) {
@@ -254,7 +270,7 @@ public class MLPaintPanel extends JComponent
 
 	public void actOnChar(char ch) {
 		if (Character.isDigit(ch)) {
-			brushRadius = 5 * (ch - '0' + 1);// somehow translate it
+			brushRadius = radiusFromChDigit(ch);// somehow translate it
 			// show the user too
 			System.out.printf("paintbrush radius: %s\n", brushRadius);
 		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
@@ -264,6 +280,8 @@ public class MLPaintPanel extends JComponent
 			writeSuggestionToLabels(POSITIVE);
 		}
 	}
+
+
 
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
@@ -281,10 +299,8 @@ public class MLPaintPanel extends JComponent
 			view.preConcatenate(AffineTransform.getTranslateInstance(x, y));
 			
 		} else if (e.isShiftDown()) {// shift adjusts brush radius
-			brushRadius *= scale;
-			brushRadius = Math.max(0.5, brushRadius);// never < 1 pixel
-			System.out.printf("brushRadius := %s\n", brushRadius);
-			
+			multiplyBrushRadius(scale);
+
 		} else if (e.isAltDown()) {// adjusts nose size or adjusts fill agressiveness
 			
 			
@@ -294,7 +310,19 @@ public class MLPaintPanel extends JComponent
 		
 		repaint();
 	}
-	
+
+
+	public void multiplyBrushRadius(double scale) {
+		brushRadius *= scale;
+		brushRadius = Math.max(0.5, brushRadius);// never < 1 pixel
+		brushRadius = Math.min(brushRadius, radiusFromChDigit('9'));
+		System.out.printf("brushRadius := %s\n", brushRadius);
+	}
+
+	public int radiusFromChDigit(char ch) {
+		return 5 * (ch - '0' + 1);
+	}
+
 	private void brushFreshPaint(MouseEvent e, boolean isNegative) {
 		int index = isNegative ? FRESH_NEG : FRESH_POS;
 		Ellipse2D brush = new Ellipse2D.Double(
@@ -446,22 +474,34 @@ public class MLPaintPanel extends JComponent
 		return rr;
 	}
 
-
-	private PriorityQueue<MyPoint> runDijkstra() {
-		//https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
-		//
+	private void initDijkstra() {
 		// set all of doubles[width][height] to +INF
 		for (double[] row: distances) {
 			Arrays.fill(row, Double.POSITIVE_INFINITY);
 		}
-		// initialize empty queue for fuelCost MyPoints
+		// initialize empty listQueues for fuelCost MyPoints
+		listQueues = new ArrayList<PriorityQueue<MyPoint>>();
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
 		// Add seedPoints to the queue and thence to distances  MAYDO: More than one
 		for (MyPoint item: getDijkstraSeedPoints()) {
 			queue.add(item);
 			distances[item.x][item.y] = item.fuelCost;
 		}
-		int reps = (int) (freshPaintNumPositives*2);
+		listQueues.add(queue);
+		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
+		for (int i=0; i<15; i++) {
+			growDijkstra(repsIncrement);
+		}
+	}
+
+	/* Given existence of distances only up till this point,
+	 * and then taking the final queue in the listQueues,
+	 * add to listQueues a new queue enclosing int reps more area.
+	 */
+	private void growDijkstra(int reps) {
+		//https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
+		PriorityQueue<MyPoint> prevQueue = listQueues.get(listQueues.size()-1);
+		PriorityQueue<MyPoint> queue = new PriorityQueue<MyPoint>(prevQueue);
 		for (int i=0; i < reps; i++) {
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
@@ -495,7 +535,7 @@ public class MLPaintPanel extends JComponent
 			//					Anything needing added to the queue would have had INF distance.
 			}
 		}
-		return queue;
+		listQueues.add(queue);
 	}
 
 	private boolean isXYOutsideImage(int x, int y) {
@@ -546,7 +586,7 @@ public class MLPaintPanel extends JComponent
 	private double getSoftScoreDistanceTransform(double softScore) {  //
 		double out = softScore;
 		out = Math.pow(out, scorePower);
-		out += 1;
+		//out += 1;
 		return out;
 	}
 
@@ -602,7 +642,24 @@ public class MLPaintPanel extends JComponent
 		return out;
 	}
 
-	private void visualizeQueue(PriorityQueue<MyPoint> queue, boolean isToInitialize) {
+	public void growSuggestion() {
+		queueBoundsIdx += 1;
+		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
+		if (listQueues.size() == queueBoundsIdx) {
+			int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
+			growDijkstra(repsIncrement);
+		}
+		visualizeQueue(queueBoundsIdx, true);
+	}
+
+	public void shrinkSuggestion() {
+		queueBoundsIdx -= 1;
+		if (queueBoundsIdx < 0) return;
+		visualizeQueue(queueBoundsIdx, true);
+	}
+
+	private void visualizeQueue(int listQueuesIdx, boolean isToInitialize) {
+		PriorityQueue<MyPoint> queue = listQueues.get(listQueuesIdx);
 		if (isToInitialize) {
 			suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
 		}
@@ -626,7 +683,7 @@ public class MLPaintPanel extends JComponent
 		if (suggestionOutlines == null || distances == null || labels == null) {
 			return;
 		}
-		double thresholdDistance = Double.POSITIVE_INFINITY;
+		double thresholdDistance = getThresholdDistance();
 		WritableRaster labels0 = labels.getRaster();
 		for (int x=0; x<width; x++){
 			for (int y=0; y<height; y++){
@@ -637,5 +694,11 @@ public class MLPaintPanel extends JComponent
 		}
 		suggestionOutlines = null;
 		repaint();
+	}
+
+	private double getThresholdDistance() {
+		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueBoundsIdx);
+		MyPoint lowestPoint = thisQueue.peek();
+		return lowestPoint.fuelCost;
 	}
 }

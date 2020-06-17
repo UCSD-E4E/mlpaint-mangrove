@@ -14,6 +14,7 @@ plugins {
 repositories {
     // Use jcenter for resolving dependencies.
     // You can declare any Maven/Ivy/file repository here.
+    mavenCentral()
     jcenter()
 }
 
@@ -28,7 +29,12 @@ dependencies {
     implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation 'com.github.haifengl:smile-core:2.4.0'
 	implementation 'org.bytedeco.javacpp-presets:mkl:2018.1-1.4'	// SMILE may want this
-    
+    // https://mvnrepository.com/artifact/org.gdal/gdal
+    //compile group: 'org.gdal', name: 'gdal', version: '3.1.0'
+    //compile group: 'org.gdal', name: 'gdal', version: '3.1.0'
+    compile group: 'org.gdal', name: 'gdal', version: '3.1.0', ext: 'pom'
+    //https://gis.stackexchange.com/questions/143998/error-in-using-gdal-java-binding
+    //https://github.com/gradle/gradle/issues/2631
 
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'

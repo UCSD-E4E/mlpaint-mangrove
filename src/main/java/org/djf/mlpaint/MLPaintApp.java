@@ -10,23 +10,13 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 import org.djf.util.SwingApp;
 
 import com.google.common.collect.Maps;
 import com.google.common.io.MoreFiles;
 import org.djf.util.SwingUtil;
-
 
 /** Magic Label Paint ~ ML Paint
  *  	A GUI for assisted labeling, using interactive machine learning suggestions
@@ -122,12 +112,14 @@ public class MLPaintApp extends SwingApp {
 
 		JMenu label = newMenu("Label",
 				newMenuItem("Label proposed as positive +  m", (name,ev) -> mlp.actOnChar('m')), //MAYDO: UI key choice
-				newMenuItem("Label proposed as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
-				newMenuItem("Label proposed as unlabeled|control 0", this::label),
-				newMenuItem("Clear proposed|BACK_SPACE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
-				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.brushRadius *= 1.5),
-				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.brushRadius /= 1.5),
-				newMenuItem("Reset brush size",   (name,ev) -> mlp.brushRadius = 10),
+				newMenuItem("Label suggestion as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
+				newMenuItem("Label suggestion as unlabeled|control 0", this::label),
+				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
+				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
+				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
+				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),
+				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
+				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.radiusFromChDigit('1')),
 				null);
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
@@ -163,7 +155,7 @@ public class MLPaintApp extends SwingApp {
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
 		// 3. Load downsampled images for all the layers
-		// 4. When saving to _labels.png, remember to upsample the result 
+		// 4. When saving to _labels.png, remember to upsample the result    //REDUCE the DEM layer to 8 bits, grayscale, per pixel, reduce distances to a byte, not a double. Size of things match.
 
 		BufferedImage image = null;
 		BufferedImage labels = null;
@@ -171,7 +163,7 @@ public class MLPaintApp extends SwingApp {
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
 			BufferedImage img = ImageIO.read(file);
-			t = reportTime(t, "loaded %s", file.toPath());
+			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
 			if (file.toString().contains("_RGB")) {
 				image = img;
@@ -198,7 +190,9 @@ public class MLPaintApp extends SwingApp {
 		showClassifier.setSelected(false);
 		mlp.resetData(image, labels, extraLayers);
 		mlp.revalidate();// https://docs.oracle.com/javase/8/docs/api/javax/swing/JComponent.html#revalidate--
-		status("Opened %s", currentImageFile);
+		status("Opened %s  %,d x %,d       %s", currentImageFile, image.getWidth(), image.getHeight(),
+				image.getColorModel().toString());
+		System.out.printf("image color model: %s", image.getColorModel().toString());
 	}
 
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
