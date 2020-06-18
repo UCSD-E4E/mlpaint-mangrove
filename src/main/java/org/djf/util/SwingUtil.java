@@ -143,15 +143,28 @@ public class SwingUtil {
 		return subsampling;
 	}
 
-	public static BufferedImage upsampleImage(BufferedImage smallImg, Dimension goalDimensions,int upSampling) {
-		Preconditions.checkArgument(smallImg.getWidth()*upSampling  >= goalDimensions.width,
+	public static BufferedImage upsampleImage0Channel(BufferedImage smallImg, Dimension goalDimensions, int upSampling) {
+		int pixelDifferenceWidth  = smallImg.getWidth()*upSampling  - goalDimensions.width;
+		int pixelDifferenceHeight = smallImg.getHeight()*upSampling - goalDimensions.height;
+		Preconditions.checkArgument(pixelDifferenceWidth >= 0,
 				"For the upsampling in width, our goal is too big.");
-		Preconditions.checkArgument(smallImg.getHeight()*upSampling >= goalDimensions.height,
+		Preconditions.checkArgument(pixelDifferenceHeight>= 0,
 				"For the upsampling in height, our goal is too big.");
-		Preconditions.checkArgument(smallImg.getWidth()*upSampling  - upSampling < goalDimensions.width,
+		Preconditions.checkArgument( pixelDifferenceWidth < upSampling,
 				"For the upsampling in width, we overshoot our goal.");
-		Preconditions.checkArgument(smallImg.getHeight()*upSampling - upSampling < goalDimensions.height,
+		Preconditions.checkArgument(pixelDifferenceHeight < upSampling,
 				"For the upsampling in height, we overshoot our goal.");
 
+		BufferedImage bigImg = new BufferedImage(goalDimensions.width, goalDimensions.height, smallImg.getType());
+		WritableRaster bigRawData = bigImg.getRaster();
+		WritableRaster smallRawData = smallImg.getRaster(); //GROK: Versus writableRaster, what about readableRaster?
+
+		for (int x=0; x < goalDimensions.width; x++) {
+			for (int y = 0; y < goalDimensions.height; y++) {
+				int pixelVal = smallRawData.getSample(x / upSampling, y / upSampling,0);
+				bigRawData.setSample(x, y, 0, pixelVal);
+			}
+		}
+		return bigImg;
 	}
 }
