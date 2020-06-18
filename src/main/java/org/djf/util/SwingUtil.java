@@ -71,6 +71,20 @@ public class SwingUtil {
 		throw new IOException("Couldn't parse the file: " + imageFile);
 	}
 
+	public static boolean isSameDimensions(Dimension xy, File[] files) throws IOException {
+		for (File file: files) { //GROK: hasnext vs for each
+			try {
+				Dimension imgDim = readImageDimensions(file);
+				if ( imgDim.width != xy.width || imgDim.height != xy.height ) {
+					return false;
+				}
+			} catch (IOException ex) { //GROK: ensure
+				throw ex;
+			}
+		}
+		return true;
+	}
+
 	public static void fillImage(BufferedImage img, int intVal) {
 		WritableRaster rawData = img.getRaster();
 		for (int x = 0; x < img.getWidth(); x++) {
@@ -79,7 +93,14 @@ public class SwingUtil {
 			}
 		}
 	}
-	
+
+	public static void	subsampleImageFile(File file, Dimension widthHeight, int superPixelEdge) throws IOException {//BufferedImage
+		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
+		IIOReadProgressListener progressListener = null;
+		int width = -1;
+		int height = -1;
+		subsampleImage(inputStream, width, height, progressListener);
+	}
 	
 	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram
 	public static BufferedImage subsampleImage(ImageInputStream inputStream, int width, int height,
@@ -122,4 +143,15 @@ public class SwingUtil {
 		return subsampling;
 	}
 
+	public static BufferedImage upsampleImage(BufferedImage smallImg, Dimension goalDimensions,int upSampling) {
+		Preconditions.checkArgument(smallImg.getWidth()*upSampling  >= goalDimensions.width,
+				"For the upsampling in width, our goal is too big.");
+		Preconditions.checkArgument(smallImg.getHeight()*upSampling >= goalDimensions.height,
+				"For the upsampling in height, our goal is too big.");
+		Preconditions.checkArgument(smallImg.getWidth()*upSampling  - upSampling < goalDimensions.width,
+				"For the upsampling in width, we overshoot our goal.");
+		Preconditions.checkArgument(smallImg.getHeight()*upSampling - upSampling < goalDimensions.height,
+				"For the upsampling in height, we overshoot our goal.");
+
+	}
 }

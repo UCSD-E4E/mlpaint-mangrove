@@ -638,7 +638,7 @@ public class MLPaintPanel extends JComponent
 				raster.setSample(x, y, 0, index);
 			}
 		});
-		reportTime(t,"Computed classifier on whole image.");
+		//reportTime(t,"Computed classifier on whole image.");
 		return out;
 	}
 
@@ -667,7 +667,8 @@ public class MLPaintPanel extends JComponent
 		for (MyPoint edgePoint: queue) {
 			int x = edgePoint.x;
 			int y = edgePoint.y;
-			for (int i=x-1;i<x+2; i++){
+			int thick = 12;
+			for (int i=x-thick;i<x+thick + 1; i++){
 				for (int j=y-1; j<y+2; j++){
 					if (!isXYOutsideImage(i,j)) {
 						raster.setSample( i,j, 0, SUGGESTION_EDGE);

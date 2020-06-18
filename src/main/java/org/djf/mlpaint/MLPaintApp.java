@@ -1,7 +1,6 @@
 package org.djf.mlpaint;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -28,6 +27,8 @@ public class MLPaintApp extends SwingApp {
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
+	private static final int maxXY = 196000000; //196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private int downSampleGrid = 1;
 
 	private Path currentImageFile;
 
@@ -151,9 +152,18 @@ public class MLPaintApp extends SwingApp {
 		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
 
 
-		// TODO: if image too big to load:
 		// 1. determine image dimensions on disk via Util.readImageDimensions
+		Dimension xy = SwingUtil.readImageDimensions(jfc.getSelectedFiles()[0]);
+		boolean consistent = SwingUtil.isSameDimensions(xy,jfc.getSelectedFiles());
+		if (!consistent) {
+			return;
+		}
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
+		int imgXY = xy.width*xy.height;
+		while (imgXY > maxXY) {
+			downSampleGrid += 1;
+			imgXY /= (downSampleGrid*downSampleGrid);
+		}
 		// 3. Load downsampled images for all the layers
 		// 4. When saving to _labels.png, remember to upsample the result    //REDUCE the DEM layer to 8 bits, grayscale, per pixel, reduce distances to a byte, not a double. Size of things match.
 
@@ -162,6 +172,7 @@ public class MLPaintApp extends SwingApp {
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
+			//BufferedImage img = SwingUtil.subsampleImageFile(file, downSampleGrid); //
 			BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
@@ -202,6 +213,10 @@ public class MLPaintApp extends SwingApp {
 		String formatName = "tiff";
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + extension;
 		Path outfile = directory.resolve(filename);
+		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
+		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
+		//  It seems that  4-bit image rather than 8-bit allows for double the image size, 2^32, or 65,500^2.
+		BufferedImage labelsToScale = upSampleImg(smallImg, goalDimensions, upSampling);
 		ImageIO.write(mlp.labels, formatName, outfile.toFile());
 		status("Saved %d x %d labels to %s", mlp.width, mlp.height, outfile);
 		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
