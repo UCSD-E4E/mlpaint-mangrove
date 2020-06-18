@@ -94,16 +94,14 @@ public class SwingUtil {
 		}
 	}
 
-	public static void	subsampleImageFile(File file, Dimension widthHeight, int superPixelEdge) throws IOException {//BufferedImage
+	public static BufferedImage	subsampleImageFile(File file, int subSamplingEdge) throws IOException {//BufferedImage
 		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
 		IIOReadProgressListener progressListener = null;
-		int width = -1;
-		int height = -1;
-		subsampleImage(inputStream, width, height, progressListener);
+		return subsampleImage(inputStream, subSamplingEdge, progressListener);
 	}
 	
-	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram
-	public static BufferedImage subsampleImage(ImageInputStream inputStream, int width, int height,
+	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram, altered mildly
+	public static BufferedImage subsampleImage(ImageInputStream inputStream, int subSamplingEdge,
 			IIOReadProgressListener progressListener) throws IOException {
 
 		BufferedImage resampledImage = null;
@@ -119,28 +117,14 @@ public class SwingUtil {
 		ImageReadParam imageReaderParams = reader.getDefaultReadParam();
 		reader.setInput(inputStream);
 
-		Dimension d1 = new Dimension(reader.getWidth(0), reader.getHeight(0));
-		Dimension d2 = new Dimension(width, height);
-		int subsampling = (int) scaleSubsamplingMaintainAspectRatio(d1, d2);
-		imageReaderParams.setSourceSubsampling(subsampling, subsampling, 0, 0);
+		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
+		imageReaderParams.setSourceSubsampling(subSamplingEdge, subSamplingEdge, 0, 0);
 
 		reader.addIIOReadProgressListener(progressListener);
 		resampledImage = reader.read(0, imageReaderParams);
 		reader.removeAllIIOReadProgressListeners();
 
 		return resampledImage;
-	}
-
-	public static long scaleSubsamplingMaintainAspectRatio(Dimension d1, Dimension d2) {
-		long subsampling = 1;
-
-		if (d1.getWidth() > d2.getWidth()) {
-			subsampling = Math.round(d1.getWidth() / d2.getWidth());
-		} else if (d1.getHeight() > d2.getHeight()) {
-			subsampling = Math.round(d1.getHeight() / d2.getHeight());
-		}
-
-		return subsampling;
 	}
 
 	public static BufferedImage upsampleImage0Channel(BufferedImage smallImg, Dimension goalDimensions, int upSampling) {
@@ -154,6 +138,8 @@ public class SwingUtil {
 				"For the upsampling in width, we overshoot our goal.");
 		Preconditions.checkArgument(pixelDifferenceHeight < upSampling,
 				"For the upsampling in height, we overshoot our goal.");
+		//All those preconditions should work, since our downsampling did this:
+		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
 
 		BufferedImage bigImg = new BufferedImage(goalDimensions.width, goalDimensions.height, smallImg.getType());
 		WritableRaster bigRawData = bigImg.getRaster();
