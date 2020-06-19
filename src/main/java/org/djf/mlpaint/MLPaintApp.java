@@ -17,6 +17,8 @@ import com.google.common.collect.Maps;
 import com.google.common.io.MoreFiles;
 import org.djf.util.SwingUtil;
 
+import static org.djf.util.SwingUtil.setRGBNoAlpha;
+
 /** Magic Label Paint ~ ML Paint
  *  	A GUI for assisted labeling, using interactive machine learning suggestions
  */
@@ -90,6 +92,9 @@ public class MLPaintApp extends SwingApp {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
 		showClassifier.addActionListener(event -> {
 			mlp.showClassifier.set(showClassifier.isSelected());
+			if (mlp.classifierOutput == null) {  //GROK: I feel terrible about this programming. It's 1 am.
+				mlp.classifierOutput = mlp.runClassifier();
+			}
 			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifier.get());
 		});
 
@@ -167,12 +172,12 @@ public class MLPaintApp extends SwingApp {
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
-			BufferedImage img = SwingUtil.subsampleImageFile(file, xy, BufferedImage.TYPE_INT_RGB);
+			BufferedImage img = SwingUtil.subsampleImageFile(file, xy);
 			//BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
 			if (file.toString().contains("_RGB")) {
-				image = img;
+				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
 			} else if (file.toString().contains("_labels")) {
 				labels = img;

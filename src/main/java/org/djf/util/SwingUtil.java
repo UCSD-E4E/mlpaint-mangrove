@@ -1,7 +1,6 @@
 package org.djf.util;
 
-import java.awt.Color;
-import java.awt.Dimension;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
@@ -53,6 +52,24 @@ public class SwingUtil {
 		return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY, icm);
 	}
 
+	public static void fillImage(BufferedImage img, int intVal) {
+		WritableRaster rawData = img.getRaster();
+		for (int x = 0; x < img.getWidth(); x++) {
+			for (int y = 0; y < img.getHeight(); y++) {
+				rawData.setSample(x, y, 0, intVal);
+			}
+		}
+	}
+
+	public static BufferedImage setRGBNoAlpha(BufferedImage withAlpha) {
+		BufferedImage copy = new BufferedImage(withAlpha.getWidth(), withAlpha.getHeight(), BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = copy.createGraphics();
+		g2d.setColor(Color.WHITE); // Or what ever fill color you want...
+		g2d.fillRect(0, 0, copy.getWidth(), copy.getHeight());
+		g2d.drawImage(withAlpha, 0, 0, null);
+		g2d.dispose();
+		return copy;
+	}
 
 
 	public static Dimension readImageDimensions(File imageFile) throws IOException {
@@ -87,25 +104,15 @@ public class SwingUtil {
 		return true;
 	}
 
-	public static void fillImage(BufferedImage img, int intVal) {
-		WritableRaster rawData = img.getRaster();
-		for (int x = 0; x < img.getWidth(); x++) {
-			for (int y = 0; y < img.getHeight(); y++) {
-				rawData.setSample(x, y, 0, intVal);
-			}
-		}
-	}
 
-	public static BufferedImage	subsampleImageFile(File file,
-													  ImageResamplingDims xy, int destinationType) throws IOException {//BufferedImage
+	public static BufferedImage	subsampleImageFile(File file, ImageResamplingDims xy) throws IOException {//BufferedImage
 		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
 		IIOReadProgressListener progressListener = null;
-		return subsampleImage(inputStream, xy, destinationType, progressListener);
+		return subsampleImage(inputStream, xy, progressListener);
 	}
 	
 	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram, altered mildly
 	public static BufferedImage subsampleImage(ImageInputStream inputStream, ImageResamplingDims xy,
-			int destinationType,
 			IIOReadProgressListener progressListener) throws IOException {
 
 		BufferedImage resampledImage = null;
@@ -123,11 +130,6 @@ public class SwingUtil {
 
 		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
 		imageReaderParams.setSourceSubsampling(xy.samplingEdge, xy.samplingEdge, 0, 0);
-
-		// Set output image type
-		//BufferedImage destinationImg = new BufferedImage( xy.smallx, xy.smally, destinationType );
-		//ImageTypeSpecifier peculiarType = new ImageTypeSpecifier(destinationImg); //MAYDO: Clean up this junky program.
-		//imageReaderParams.setDestinationType(peculiarType);
 
 		reader.addIIOReadProgressListener(progressListener);
 		resampledImage = reader.read(0, imageReaderParams);

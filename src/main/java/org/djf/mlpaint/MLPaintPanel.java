@@ -90,7 +90,7 @@ public class MLPaintPanel extends JComponent
 	private SoftClassifier<double[]> classifier;
 
 	/** classifier output image, grayscale */
-	private BufferedImage classifierOutput;
+	public BufferedImage classifierOutput; //GROK: Why was this made private?
 
 	private BufferedImage suggestionOutlines;
 	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
@@ -213,7 +213,7 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() && !e.isAltDown()) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
-			classifierOutput = runClassifier();
+			//classifierOutput = runClassifier();
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			queueBoundsIdx = listQueues.size()-1;
 			visualizeQueue(queueBoundsIdx, true);
@@ -456,9 +456,9 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
 		
-		/*if (classifierOutput != null) {
+		if (classifierOutput != null) {
 			classifierOutput = runClassifier();
-		}*/
+		}
 	}
 	
 	private double[] getFeatureVector(int x, int y) {
@@ -626,7 +626,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 
-	private BufferedImage runClassifier() {
+	public BufferedImage runClassifier() { //GROK: Why did you make this private?
 		long t = System.currentTimeMillis();
 		Preconditions.checkNotNull(classifier, "Must put positive paint down first");
 		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
