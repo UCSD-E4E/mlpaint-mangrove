@@ -12,10 +12,12 @@ import java.util.Iterator;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.stream.ImageInputStream;
 
 import com.google.common.base.Preconditions;
+import org.djf.mlpaint.ImageResamplingDims;
 import org.djf.mlpaint.MyPoint;
 
 /** Swing Utilities.
@@ -94,14 +96,16 @@ public class SwingUtil {
 		}
 	}
 
-	public static BufferedImage	subsampleImageFile(File file, int subSamplingEdge) throws IOException {//BufferedImage
+	public static BufferedImage	subsampleImageFile(File file,
+													  ImageResamplingDims xy, int destinationType) throws IOException {//BufferedImage
 		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
 		IIOReadProgressListener progressListener = null;
-		return subsampleImage(inputStream, subSamplingEdge, progressListener);
+		return subsampleImage(inputStream, xy, destinationType, progressListener);
 	}
 	
 	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram, altered mildly
-	public static BufferedImage subsampleImage(ImageInputStream inputStream, int subSamplingEdge,
+	public static BufferedImage subsampleImage(ImageInputStream inputStream, ImageResamplingDims xy,
+			int destinationType,
 			IIOReadProgressListener progressListener) throws IOException {
 
 		BufferedImage resampledImage = null;
@@ -118,7 +122,12 @@ public class SwingUtil {
 		reader.setInput(inputStream);
 
 		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
-		imageReaderParams.setSourceSubsampling(subSamplingEdge, subSamplingEdge, 0, 0);
+		imageReaderParams.setSourceSubsampling(xy.samplingEdge, xy.samplingEdge, 0, 0);
+
+		// Set output image type
+		//BufferedImage destinationImg = new BufferedImage( xy.smallx, xy.smally, destinationType );
+		//ImageTypeSpecifier peculiarType = new ImageTypeSpecifier(destinationImg); //MAYDO: Clean up this junky program.
+		//imageReaderParams.setDestinationType(peculiarType);
 
 		reader.addIIOReadProgressListener(progressListener);
 		resampledImage = reader.read(0, imageReaderParams);
