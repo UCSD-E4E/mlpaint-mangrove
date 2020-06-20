@@ -489,7 +489,7 @@ public class MLPaintPanel extends JComponent
 		}
 		listQueues.add(queue);
 		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
-		for (int i=0; i<15; i++) {
+		for (int i=0; i<20; i++) {
 			growDijkstra(repsIncrement);
 		}
 	}
