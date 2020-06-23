@@ -193,6 +193,7 @@ public class MLPaintPanel extends JComponent
 		//System.out.printf("MouseDrag %s\n", e.toString());
 		if (e.isControlDown()) {
 			// pan the image
+			System.out.println("Dragging.");
 			double dx = e.getPoint().getX() - mousePrev.getPoint().getX();
 			double dy = e.getPoint().getY() - mousePrev.getPoint().getY();
 			view.preConcatenate(AffineTransform.getTranslateInstance(dx, dy));
@@ -667,7 +668,7 @@ public class MLPaintPanel extends JComponent
 		for (MyPoint edgePoint: queue) {
 			int x = edgePoint.x;
 			int y = edgePoint.y;
-			int thick = 12;
+			int thick = 2;
 			for (int i=x-thick;i<x+thick + 1; i++){
 				for (int j=y-1; j<y+2; j++){
 					if (!isXYOutsideImage(i,j)) {

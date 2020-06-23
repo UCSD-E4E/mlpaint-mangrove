@@ -29,7 +29,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
-	private static final int maxPixels = (int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private static final int maxPixels = (int) Math.pow(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
 	private ImageResamplingDims xy;
 
 	private Path currentImageFile;
