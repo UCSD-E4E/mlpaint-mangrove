@@ -65,6 +65,32 @@ public class SwingUtil {
 		}
 	}
 
+	public static void addImage(BufferedImage buff1, BufferedImage buff2) {
+		Graphics2D g2d = buff1.createGraphics();
+		g2d.setComposite(
+				AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+		g2d.drawImage(buff2, 0, 0, null);
+		g2d.dispose();
+	}
+
+	public static void copyImage(BufferedImage empty, BufferedImage full) {
+		WritableRaster emptyData = empty.getRaster();
+		WritableRaster fullData  = full.getRaster();
+		boolean someNotZeroOrOne = false;
+		for (int x = 0; x < empty.getWidth(); x++) {
+			for (int y = 0; y < empty.getHeight(); y++) {
+				int sampleVal = fullData.getSample(x, y,0);
+				emptyData.setSample(x, y, 0, sampleVal);
+				if (sampleVal != 1 && sampleVal !=0){
+					someNotZeroOrOne = true;
+				}
+			}
+		}
+		if (someNotZeroOrOne) {
+			System.out.println("Some of the labels in the labels image were greater than 1 or 0.");
+		}
+	}
+
 	public static BufferedImage setRGBNoAlpha(BufferedImage withAlpha) {
 		BufferedImage copy = new BufferedImage(withAlpha.getWidth(), withAlpha.getHeight(), BufferedImage.TYPE_INT_RGB);
 		Graphics2D g2d = copy.createGraphics();

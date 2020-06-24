@@ -202,8 +202,8 @@ public class MLPaintApp extends SwingApp {
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
 		// For now: compressed TIFF is good
-		String extension = ".tif";
-		String formatName = "tiff";
+		String extension = ".png"; //".tif";
+		String formatName = "png"; //"tiff";
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.

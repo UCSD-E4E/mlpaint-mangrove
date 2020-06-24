@@ -130,11 +130,13 @@ public class MLPaintPanel extends JComponent
 		width = image.getWidth();
 		height = image.getHeight();
 
-		labels = labels2;
-		// if no previously existing labels loaded, create an unlabeled layer of same size.  Initially all 0's == UNLABELED
-		if (labels == null) {
-			//labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-			labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
+		//labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+		labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);//Nicely initializes to 0.
+		// if an existing labels loaded, copy it on, profiting from the SwingUtil colormap.
+		if (labels2 != null) {
+			//SwingUtil.addImage(labels, labels2);
+			SwingUtil.copyImage(labels, labels2);
+			System.out.println("We copied in a labels object.");
 		}
 
 		extraLayers = extraLayers2;
@@ -332,6 +334,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private void brushFreshPaint(MouseEvent e, boolean isNegative) {
+		long t = System.currentTimeMillis();
 		int index = isNegative ? FRESH_NEG : FRESH_POS;
 		Ellipse2D brush = new Ellipse2D.Double(
 				e.getX() - brushRadius, 
@@ -350,6 +353,7 @@ public class MLPaintPanel extends JComponent
 		} catch (NoninvertibleTransformException e1) {// won't happen
 			e1.printStackTrace();
 		}
+		t = reportTime(t, "Painted another bit of fresh paint onto the world space."); //0 or 1 ms, even for huge.
 	}
 
 	/**Paints the image, freshpaint, and possibly classifier output, to the screen.
@@ -482,6 +486,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private void initDijkstra() {
+		long t = System.currentTimeMillis();
 		// set all of doubles[width][height] to +INF
 		for (double[] row: distances) {
 			Arrays.fill(row, Double.POSITIVE_INFINITY);
@@ -499,6 +504,7 @@ public class MLPaintPanel extends JComponent
 		for (int i=0; i<20; i++) {
 			growDijkstra(repsIncrement);
 		}
+		t = reportTime(t, "Initialized Dijkstra total time.");
 	}
 
 	/* Given existence of distances only up till this point,
@@ -657,15 +663,18 @@ public class MLPaintPanel extends JComponent
 			growDijkstra(repsIncrement);
 		}
 		visualizeQueue(queueBoundsIdx, true);
+		repaint();
 	}
 
 	public void shrinkSuggestion() {
 		queueBoundsIdx -= 1;
 		if (queueBoundsIdx < 0) return;
 		visualizeQueue(queueBoundsIdx, true);
+		repaint();
 	}
 
 	private void visualizeQueue(int listQueuesIdx, boolean isToInitialize) {
+		long t = System.currentTimeMillis();
 		PriorityQueue<MyPoint> queue = listQueues.get(listQueuesIdx);
 		if (isToInitialize) {
 			suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
@@ -683,7 +692,7 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
-		repaint();
+		t = reportTime(t, "vizualizeQueue ran.");
 	}
 
 	private void writeSuggestionToLabels(int labelIndex) {
