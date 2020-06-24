@@ -27,6 +27,8 @@ public class ImageResamplingDims {
 		this.bigDim = bigDim;
 
 		this.samplingEdge = getSamplingEdgeSize(maxPixels);
+		System.out.printf(
+				"We downsample our image in squares of %d x %d, samplingEdge.",this.samplingEdge, this.samplingEdge);
 
 		//https://docs.oracle.com/javase/7/docs/api/javax/imageio/IIOParam.html
 		//truncate[(width  + sourceXSubsampling - 1) / sourceXSubsampling].

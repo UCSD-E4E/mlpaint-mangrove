@@ -189,13 +189,6 @@ public class MLPaintApp extends SwingApp {
 		if (image == null) {
 			throw new IllegalArgumentException("Must provide the _RGB image");// appears in status bar in red
 		}
-		// if no previously existing labels loaded, create an unlabeled layer of same size.  Initially all 0's == UNLABELED
-		if (labels == null) {
-			labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-			SwingUtil.fillImage(labels, mlp.UNLABELED);
-			//MAYDO: to reduce RAM   BufferedImage.TYPE_BYTE_BINARY, new ColorModel(with just 4 or 16 colors));
-		}
-
 		// My original design REPLACED the mlp, but it was forever not re-painting.
 		// Instead, I'll just change its data.
 		showClassifier.setSelected(false);

@@ -42,25 +42,23 @@ public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
-	public static final int UNLABELED = 255;
-	public static final int POSITIVE = 200;
-	public static final int NEGATIVE = 0;
+	public static final int UNLABELED = 0; //Question: Should we put an alpha mask on the permanent labels?
+	public static final int POSITIVE = 3; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
+	public static final int NEGATIVE = 2;
 	public static final int NO_DATA = 1;
-	// possibly up to 255 different labels, as needed
-	public static final int POS_DARKNESS = 125;
-	public static final int NEG_DARKNESS = 0;
-	public static final int LABEL_OPACITY = 80;
+	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.TRANSPARENT,SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY};
+	// possibly up to 16 different labels, as needed, with more colors
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
 	private static final int FRESH_UNLABELED = 0;
 	private static final int FRESH_POS = 1;
 	private static final int FRESH_NEG = 2;
-	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAGREEN, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
+	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
 
 	// label suggestion index codes (0 or 1 maximum)
 	private static final int SUGGESTION_TRANSPARENT = 0;
 	private static final int SUGGESTION_EDGE = 1;
-	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHABLUE};
+	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
 	private static final double QUEUE_GROWTH = 0.2;
@@ -131,7 +129,14 @@ public class MLPaintPanel extends JComponent
 		image = masterImage;
 		width = image.getWidth();
 		height = image.getHeight();
+
 		labels = labels2;
+		// if no previously existing labels loaded, create an unlabeled layer of same size.  Initially all 0's == UNLABELED
+		if (labels == null) {
+			//labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+			labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
+		}
+
 		extraLayers = extraLayers2;
 		Preconditions.checkArgument(width  == labels.getWidth() && height == labels.getHeight(),
 				"The labels size does not match the image size.");
@@ -277,8 +282,10 @@ public class MLPaintPanel extends JComponent
 		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
 			// That way we can add labels interactively in the GUI by changing the keys variable.
 			writeSuggestionToLabels(NEGATIVE);
+			clearFreshPaintAndSuggestions();
 		} else if (ch == 'm'){
 			writeSuggestionToLabels(POSITIVE);
+			clearFreshPaintAndSuggestions();
 		}
 	}
 
@@ -350,6 +357,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	@Override
 	protected void paintComponent(Graphics g) {
+		long t = System.currentTimeMillis();
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
@@ -359,31 +367,29 @@ public class MLPaintPanel extends JComponent
 			return;
 		}
 		g2.transform(view);
-		g2.drawImage(image, 0, 0, null);
-		if (showClassifier.get()) {// MAYDO: instead have a transparency slider??  That'd be cool.
+		t = reportTime(t, "Initialized the g2 graphic for repainting.");
+
+		if (showClassifier.get()) {                           // MAYDO: instead have a transparency slider??  That'd be cool.
 			g2.drawImage(classifierOutput, 0, 0, null);
+			t = reportTime(t, "Classifier output drawn.");
+		} else {
+			g2.drawImage(image, 0, 0, null);
+			t = reportTime(t, "Image drawn.");
 		}
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+		t = reportTime(t, "Fresh paint drawn.");
 		if (suggestionOutlines != null) {
 			g2.drawImage(suggestionOutlines, 0, 0, null); //GROC
+			t = reportTime(t, "Dijkstra suggestion outline drawn.");
 		}
-		WritableRaster labels0 = labels.getRaster();
-		for (int x=0; x<width; x++) { //GROC: It doesn't make sense to make an image and then use it as a 2D matrix.
-			for (int y=0; y<height; y++) {
-				int label0Val = labels0.getSample(x,y,0);
-				if (label0Val == POSITIVE){
-					g2.setColor(new Color(POS_DARKNESS, POS_DARKNESS, POS_DARKNESS, LABEL_OPACITY)); //gray transparent
-					g2.draw(new Line2D.Double(x, y, x, y));
-				} else if (label0Val == NEGATIVE) {
-					g2.setColor(new Color(NEG_DARKNESS, NEG_DARKNESS, NEG_DARKNESS, LABEL_OPACITY)); //black transparent
-					g2.draw(new Line2D.Double(x, y, x, y));
-				}
-			}
-		}
+		g2.drawImage(labels, 0, 0, null);
+		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
+
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
 		g2.drawRect(0, 0, width, height);
 		g2.dispose();
+		t = reportTime(t, "Boundary drawn.");
 	}
 	
 	

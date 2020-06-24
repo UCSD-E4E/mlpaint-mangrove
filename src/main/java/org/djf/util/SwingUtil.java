@@ -29,6 +29,10 @@ public class SwingUtil {
 	public static final Color ALPHARED    = new Color(1,0,0,.2f);
 	public static final Color ALPHAGREEN = new Color(0,1,0,.2f);
 	public static final Color ALPHABLUE  = new Color(0,1,0,.2f);
+	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
+	public static final Color ALPHAGRAY = new Color(0, 0, 0, .3f);
+	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);
+
 
 	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
 	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {
