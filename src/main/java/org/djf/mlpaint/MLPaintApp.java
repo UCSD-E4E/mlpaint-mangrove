@@ -120,7 +120,7 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Label proposed as positive +  m", (name,ev) -> mlp.actOnChar('m')), //MAYDO: UI key choice
 				newMenuItem("Label suggestion as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
 				newMenuItem("Label suggestion as unlabeled|control 0", this::label),
-				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.clearFreshPaintAndSuggestions()),
+				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
 				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
 				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
 				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),

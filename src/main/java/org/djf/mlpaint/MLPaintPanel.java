@@ -11,7 +11,6 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
-import java.awt.geom.Line2D;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
@@ -23,7 +22,6 @@ import java.util.stream.IntStream;
 import javax.swing.JComponent;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import org.djf.util.SwingApp;
 import org.djf.util.SwingUtil;
 
 import com.google.common.base.Preconditions;
@@ -51,15 +49,10 @@ public class MLPaintPanel extends JComponent
 	// possibly up to 16 different labels, as needed, with more colors
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
-	private static final int FRESH_UNLABELED = 0;
+	private static final int FRESH_UNLABELED = 0; //Index zero for unlabeled is special: it initializes to zero.
 	private static final int FRESH_POS = 1;
 	private static final int FRESH_NEG = 2;
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
-
-	// label suggestion index codes (0 or 1 maximum)
-	private static final int SUGGESTION_TRANSPARENT = 0;
-	private static final int SUGGESTION_EDGE = 1;
-	private static final Color[] SUGGESTION_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
 	private static final double QUEUE_GROWTH = 0.2;
@@ -91,7 +84,6 @@ public class MLPaintPanel extends JComponent
 	/** classifier output image, grayscale */
 	public BufferedImage classifierOutput; //GROK: Why was this made private?
 
-	private BufferedImage suggestionOutlines;
 	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
 	 */
@@ -154,9 +146,8 @@ public class MLPaintPanel extends JComponent
 					"The extra layer size does not match the image size.");
 		});
 		distances = new double[width][height];
-		suggestionOutlines = null;
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
-		clearFreshPaintAndSuggestions();
+		initializeFreshPaint();
 		freshPaintNumPositives = null;
 		classifier = null;
 		classifierOutput = null;
@@ -172,11 +163,10 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
-	public void clearFreshPaintAndSuggestions() {
-		SwingUtil.fillImage(freshPaint, FRESH_UNLABELED);
-		if (suggestionOutlines != null) {
-			SwingUtil.fillImage(suggestionOutlines, SUGGESTION_TRANSPARENT);
-		}
+	public void initializeFreshPaint() {
+		long t = System.currentTimeMillis();
+		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
+		t = reportTime(t, "We have made a new freshpaint image.");
 		repaint();
 	}
 
@@ -292,10 +282,10 @@ public class MLPaintPanel extends JComponent
 		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
 			// That way we can add labels interactively in the GUI by changing the keys variable.
 			writeSuggestionToLabels(NEGATIVE);
-			clearFreshPaintAndSuggestions();
+			initializeFreshPaint();
 		} else if (ch == 'm'){
 			writeSuggestionToLabels(POSITIVE);
-			clearFreshPaintAndSuggestions();
+			initializeFreshPaint();
 		}
 	}
 
@@ -392,6 +382,7 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Fresh paint drawn.");
 
 		if (listQueues != null && queueBoundsIdx >= 0) {
+			g2.setColor(FRESH_COLORS[FRESH_UNLABELED]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
 				g2.drawRect(edgePoint.x,edgePoint.y,1,1);
 			}
@@ -701,7 +692,6 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
-		suggestionOutlines = null;
 		repaint();
 	}
 
