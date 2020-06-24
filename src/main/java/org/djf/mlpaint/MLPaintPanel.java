@@ -98,7 +98,7 @@ public class MLPaintPanel extends JComponent
 	private double[][] distances;
 	public double scorePower = 3.0;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
-	public int queueBoundsIdx;
+	public int queueBoundsIdx = -10;
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
 	public BufferedImage proposed;
@@ -233,7 +233,6 @@ public class MLPaintPanel extends JComponent
 			//classifierOutput = runClassifier();
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			queueBoundsIdx = listQueues.size()-1;
-			visualizeQueue(queueBoundsIdx, true);
 		}
 		mousePrev = null;
 		repaint();
@@ -391,9 +390,12 @@ public class MLPaintPanel extends JComponent
 		}
 		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
 		t = reportTime(t, "Fresh paint drawn.");
-		if (suggestionOutlines != null) {
-			g2.drawImage(suggestionOutlines, 0, 0, null); //GROC
-			t = reportTime(t, "Dijkstra suggestion outline drawn.");
+
+		if (listQueues != null && queueBoundsIdx >= 0) {
+			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
+				g2.drawRect(edgePoint.x,edgePoint.y,1,1);
+			}
+			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
 
 		// add frame to see limit, even if indistinguishable from background
@@ -668,48 +670,26 @@ public class MLPaintPanel extends JComponent
 	}
 
 	public void growSuggestion() {
+		if (queueBoundsIdx < 0) return;
 		queueBoundsIdx += 1;
 		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
 		if (listQueues.size() == queueBoundsIdx) {
 			int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
 			growDijkstra(repsIncrement);
 		}
-		visualizeQueue(queueBoundsIdx, true);
 		repaint();
 	}
 
 	public void shrinkSuggestion() {
+		if (queueBoundsIdx <= 0) return;
 		queueBoundsIdx -= 1;
-		if (queueBoundsIdx < 0) return;
-		visualizeQueue(queueBoundsIdx, true);
 		repaint();
 	}
 
-	private void visualizeQueue(int listQueuesIdx, boolean isToInitialize) {
-		long t = System.currentTimeMillis();
-		PriorityQueue<MyPoint> queue = listQueues.get(listQueuesIdx);
-		if (isToInitialize) {
-			suggestionOutlines = SwingUtil.newBinaryImage(width, height, SUGGESTION_COLORS);
-		}
-		WritableRaster raster = suggestionOutlines.getRaster();
-		for (MyPoint edgePoint: queue) {
-			int x = edgePoint.x;
-			int y = edgePoint.y;
-			int thick = 2;
-			for (int i=x-thick;i<x+thick + 1; i++){
-				for (int j=y-1; j<y+2; j++){
-					if (!isXYOutsideImage(i,j)) {
-						raster.setSample( i,j, 0, SUGGESTION_EDGE);
-					}
-				}
-			}
-		}
-		t = reportTime(t, "vizualizeQueue ran.");
-	}
 
 	private void writeSuggestionToLabels(int labelIndex) {
 		System.out.println("writeSuggestionToLabels called \n");
-		if (suggestionOutlines == null || distances == null || labels == null) {
+		if (listQueues == null || distances == null || labels == null || queueBoundsIdx < 0) {
 			return;
 		}
 		double thresholdDistance = getThresholdDistance();
