@@ -167,6 +167,8 @@ public class MLPaintPanel extends JComponent
 		long t = System.currentTimeMillis();
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		t = reportTime(t, "We have made a new freshpaint image.");
+		listQueues = null;
+		queueBoundsIdx = -1;
 		repaint();
 	}
 
@@ -382,7 +384,7 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Fresh paint drawn.");
 
 		if (listQueues != null && queueBoundsIdx >= 0) {
-			g2.setColor(FRESH_COLORS[FRESH_UNLABELED]);
+			g2.setColor(Color.YELLOW); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
 				g2.drawRect(edgePoint.x,edgePoint.y,1,1);
 			}
