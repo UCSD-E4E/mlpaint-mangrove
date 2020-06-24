@@ -28,7 +28,7 @@ public class SwingUtil {
 	public static final Color TRANSPARENT = new Color(0,0,0,0f);
 	public static final Color ALPHARED    = new Color(1,0,0,.2f);
 	public static final Color ALPHAGREEN = new Color(0,1,0,.2f);
-	public static final Color ALPHABLUE  = new Color(0,1,0,.2f);
+	public static final Color ALPHABLUE  = new Color(0,0,1,.2f);
 	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
 	public static final Color ALPHAGRAY = new Color(0, 0, 0, .3f);
 	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);

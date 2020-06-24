@@ -1,6 +1,7 @@
 package org.djf.mlpaint;
 
 import java.awt.*;
+import java.awt.AlphaComposite;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -42,10 +43,10 @@ public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
-	public static final int UNLABELED = 0; //Question: Should we put an alpha mask on the permanent labels?
-	public static final int POSITIVE = 3; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
-	public static final int NEGATIVE = 2;
-	public static final int NO_DATA = 1;
+	public static final int UNLABELED = 255;//0;//255; //Question: Should we put an alpha mask on the permanent labels?
+	public static final int POSITIVE = 100;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
+	public static final int NEGATIVE = 0;//2;// 0;
+	public static final int NO_DATA = 254;//1;//254;
 	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.TRANSPARENT,SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY};
 	// possibly up to 16 different labels, as needed, with more colors
 
@@ -73,7 +74,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	public LinkedHashMap<String, BufferedImage> extraLayers;
 
-	/** matching image labels: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
+	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
 
 	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
@@ -130,13 +131,19 @@ public class MLPaintPanel extends JComponent
 		width = image.getWidth();
 		height = image.getHeight();
 
-		//labels = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
-		labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);//Nicely initializes to 0.
-		// if an existing labels loaded, copy it on, profiting from the SwingUtil colormap.
-		if (labels2 != null) {
-			//SwingUtil.addImage(labels, labels2);
-			SwingUtil.copyImage(labels, labels2);
-			System.out.println("We copied in a labels object.");
+//		labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);//Nicely initializes to 0.
+//		System.out.println("Just created a colormap style binary image for labels.");
+//		// if an existing labels loaded, copy it on, profiting from the SwingUtil colormap.
+//		if (labels2 != null) {
+//			//SwingUtil.addImage(labels, labels2);
+//			SwingUtil.copyImage(labels, labels2);
+//			System.out.println("We copied in a labels object.");
+//		}
+		labels = labels2;
+		if (labels == null) {
+			labels = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+			SwingUtil.fillImage(labels, UNLABELED);
+			System.out.println("We created a blank labels object.");
 		}
 
 		extraLayers = extraLayers2;
@@ -159,6 +166,8 @@ public class MLPaintPanel extends JComponent
 
 	public void resetView() {
 		view = new AffineTransform();
+		double scale =  925.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
+		view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
 		showClassifier.set(false);
 		repaint();
 	}
@@ -349,7 +358,6 @@ public class MLPaintPanel extends JComponent
 			g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
 			g.fill(brush);
 			g.dispose();
-			repaint();
 		} catch (NoninvertibleTransformException e1) {// won't happen
 			e1.printStackTrace();
 		}
@@ -365,6 +373,7 @@ public class MLPaintPanel extends JComponent
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
+		System.out.printf("The JPanel is width x height, %d x %d.",getWidth(), getHeight());
 		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
 		if (image == null) {
 			g2.dispose();
@@ -386,14 +395,17 @@ public class MLPaintPanel extends JComponent
 			g2.drawImage(suggestionOutlines, 0, 0, null); //GROC
 			t = reportTime(t, "Dijkstra suggestion outline drawn.");
 		}
-		g2.drawImage(labels, 0, 0, null);
-		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
 
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
 		g2.drawRect(0, 0, width, height);
+		t = reportTime(t, "Pretty frame drawn.");
+
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+		g2.drawImage(labels, 0, 0, null);
+		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
+
 		g2.dispose();
-		t = reportTime(t, "Boundary drawn.");
 	}
 	
 	
