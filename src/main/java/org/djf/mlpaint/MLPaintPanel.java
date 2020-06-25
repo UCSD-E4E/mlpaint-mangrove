@@ -359,12 +359,12 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Painted another bit of fresh paint onto the world space."); //0 or 1 ms, even for huge.
 
 		Area brushArea = new Area(brush);
-		if (!isNegative) {
-			freshPaintArea.add(brushArea);
-			antiPaintArea.subtract(brushArea);
-		} else {
+		if (isNegative) {
 			antiPaintArea.add(brushArea);
 			freshPaintArea.subtract(brushArea);
+		} else {
+			freshPaintArea.add(brushArea);
+			antiPaintArea.subtract(brushArea);
 		}
 
 		t = reportTime(t, "Added to the area of fresh or anti paint.");
@@ -395,8 +395,8 @@ public class MLPaintPanel extends JComponent
 			g2.drawImage(image, 0, 0, null);
 			t = reportTime(t, "Image drawn.");
 		}
-		g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		t = reportTime(t, "Fresh paint drawn.");
+
+
 
 		if (listQueues != null && queueBoundsIdx >= 0) {
 			g2.setColor(SUGGESTION_COLOR); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
@@ -415,7 +415,21 @@ public class MLPaintPanel extends JComponent
 		g2.drawImage(labels, 0, 0, null);
 		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
 
-		g2.dispose();
+		try {
+			AffineTransform inverse = view.createInverse();
+			g2.transform(inverse);
+			IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
+			g2.setColor(new Color(cm.getRGB(FRESH_POS)));
+			g2.fill(freshPaintArea);
+			g2.setColor(new Color(cm.getRGB(FRESH_NEG)));
+			g2.fill(antiPaintArea);
+		} catch (NoninvertibleTransformException e1) {// won't happen
+			e1.printStackTrace();
+			g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+		} finally {
+			t = reportTime(t, "Fresh paint drawn.");
+			g2.dispose();
+		}
 	}
 	
 	
