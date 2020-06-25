@@ -408,14 +408,6 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
 
-		//Draw the fresh paint.
-		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
-		g2.setColor(new Color(cm.getRGB(FRESH_POS)));
-		g2.fill(freshPaintArea);
-		g2.setColor(new Color(cm.getRGB(FRESH_NEG)));
-		g2.fill(antiPaintArea);
-		//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		t = reportTime(t, "Fresh paint drawn.");
 
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
@@ -426,6 +418,14 @@ public class MLPaintPanel extends JComponent
 		g2.drawImage(labels, 0, 0, null);
 		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
 
+		//Draw the fresh paint.
+		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
+		g2.setColor(new Color(cm.getRGB(FRESH_POS)));
+		g2.fill(freshPaintArea);
+		g2.setColor(new Color(cm.getRGB(FRESH_NEG)));
+		g2.fill(antiPaintArea);
+		//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+		t = reportTime(t, "Fresh paint drawn.");
 
 		g2.dispose();
 	}
@@ -437,16 +437,33 @@ public class MLPaintPanel extends JComponent
 	/** Extract training set and train. */
 	public void trainClassifier() {
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
-		
-		// feature vectors of positive & negative training examples 
-		List<double[]> positives = Lists.newArrayListWithCapacity(5000);
-		List<double[]> negatives = Lists.newArrayListWithCapacity(5000);
-		
+
+		// feature vectors of positive & negative training examples
+		List<double[]> positives = Lists.newArrayListWithCapacity(50000);
+		List<double[]> negatives = Lists.newArrayListWithCapacity(50000);
+
 		// extract positive examples from each fresh paint pixel that is 1
 		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
 		int[] histogram = new int[4];
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
+		Rectangle f = freshPaintArea.getBounds();
+		f.add(antiPaintArea.getBounds());
+		System.out.printf("Here is top x: %,d",f.x);
+		System.out.printf("Here is top y: %,d",f.y);
+		System.out.printf("Here is width: %,d",f.width);
+		System.out.printf("Here is height: %,d",f.height);
+		int floory = f.y < 0 ? 0 : f.y ;
+		int capy = f.y + f.height + 1 > height ? height : f.y + f.height + 1;
+		int floorx = f.x < 0 ? 0 : f.x;
+		int capx = f.x + f.width + 1 > width ? width : f.x + f.width + 1;
+		if (capx == width || capy == height || floory == 0 || floorx == 0) {
+			System.out.println("We flew to a world edge to constrain our feature vector collection.");
+		}
+		System.out.printf("Here is floory: %,d",floory);
+		System.out.printf("Here is capy: %,d",capy);
+		System.out.printf("Here is floorx: %,d",floorx);
+		System.out.printf("Here is capx: %,d",capx);
+		for (int x = floorx; x < capx; x++) {
+			for (int y = floory; y < capy; y++) {
 				int index = rawdata.getSample(x, y, 0);// band 0
 				if (index == FRESH_POS) {
 					positives.add(getFeatureVector(x,y));
@@ -460,13 +477,15 @@ public class MLPaintPanel extends JComponent
 		int npos = positives.size();
 		int nneg = negatives.size();
 		freshPaintNumPositives = npos;//GROK
-		t = reportTime(t, "extracted %,d positives %,d negatives from %s x %s fresh paint",
+		t = reportTime(t, "We got the feature vector for each of the pixels in the image.\n" +
+						"extracted %,d positives %,d negatives from %s x %s fresh paint",
 				npos, nneg, width, height);
 		if (npos < 30) {// not enough
 			return;// silently return
 		}
 		
 		//TODO: smarter testing / picking
+		//thoughts: Area provides getBounds rectangle, we could choose within that or at least a few times that.
 		// if not enough negatives, add additional negatives collected randomly
 		Random rand = new Random();
 		while (negatives.size() < 2 * npos) {// try 2x or 3x as many negatives
@@ -478,6 +497,7 @@ public class MLPaintPanel extends JComponent
 			}
 		}
 		nneg = negatives.size();
+		t = reportTime(t, "Boosted the number of negative feature vectors to %,d",nneg);
 
 		// Convert dataset into SMILE format
 		int nFeatures = positives.get(0).length;
@@ -710,6 +730,7 @@ public class MLPaintPanel extends JComponent
 
 
 	private void writeSuggestionToLabels(int labelIndex) {
+		long t = System.currentTimeMillis();
 		System.out.println("writeSuggestionToLabels called \n");
 		if (listQueues == null || distances == null || labels == null || queueBoundsIdx < 0) {
 			return;
@@ -725,6 +746,7 @@ public class MLPaintPanel extends JComponent
 		}
 		initializeFreshPaint();
 		repaint();
+		t = reportTime(t, "We wrote the suggestion to labels via distances[][] less than threshold.");
 	}
 
 	private double getThresholdDistance() {
