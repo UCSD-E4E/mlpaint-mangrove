@@ -416,7 +416,7 @@ public class MLPaintPanel extends JComponent
 
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
 		g2.drawImage(labels, 0, 0, null);
-		t = reportTime(t, "Labels drawn via affine transform and alpha-level image.");
+		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
 
 		//Draw the fresh paint.
 		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
