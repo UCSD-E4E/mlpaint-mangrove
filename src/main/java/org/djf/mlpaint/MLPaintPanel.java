@@ -10,6 +10,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
@@ -54,6 +55,7 @@ public class MLPaintPanel extends JComponent
 	private static final int FRESH_NEG = 2;
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
 
+	private static final Color SUGGESTION_COLOR = Color.YELLOW;
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
 	private static final double QUEUE_GROWTH = 0.2;
 
@@ -75,6 +77,8 @@ public class MLPaintPanel extends JComponent
 	 */
 	private BufferedImage freshPaint;
 	private Integer freshPaintNumPositives = null;//GROK: run by classifier
+	private Area freshPaintArea = new Area();
+	private Area antiPaintArea = new Area();
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
 	public double brushRadius = radiusFromChDigit('1');
@@ -169,6 +173,8 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "We have made a new freshpaint image.");
 		listQueues = null;
 		queueBoundsIdx = -1;
+		freshPaintArea = new Area();
+		antiPaintArea = new Area();
 		repaint();
 	}
 
@@ -284,10 +290,8 @@ public class MLPaintPanel extends JComponent
 		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
 			// That way we can add labels interactively in the GUI by changing the keys variable.
 			writeSuggestionToLabels(NEGATIVE);
-			initializeFreshPaint();
 		} else if (ch == 'm'){
 			writeSuggestionToLabels(POSITIVE);
-			initializeFreshPaint();
 		}
 	}
 
@@ -353,6 +357,17 @@ public class MLPaintPanel extends JComponent
 			e1.printStackTrace();
 		}
 		t = reportTime(t, "Painted another bit of fresh paint onto the world space."); //0 or 1 ms, even for huge.
+
+		Area brushArea = new Area(brush);
+		if (!isNegative) {
+			freshPaintArea.add(brushArea);
+			antiPaintArea.subtract(brushArea);
+		} else {
+			antiPaintArea.add(brushArea);
+			freshPaintArea.subtract(brushArea);
+		}
+
+		t = reportTime(t, "Added to the area of fresh or anti paint.");
 	}
 
 	/**Paints the image, freshpaint, and possibly classifier output, to the screen.
@@ -384,7 +399,7 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Fresh paint drawn.");
 
 		if (listQueues != null && queueBoundsIdx >= 0) {
-			g2.setColor(Color.YELLOW); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
+			g2.setColor(SUGGESTION_COLOR); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
 				g2.drawRect(edgePoint.x,edgePoint.y,1,1);
 			}
@@ -520,6 +535,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	private void growDijkstra(int reps) {
 		//https://math.mit.edu/~rothvoss/18.304.3PM/Presentations/1-Melissa.pdf
+		long t = System.currentTimeMillis();
 		PriorityQueue<MyPoint> prevQueue = listQueues.get(listQueues.size()-1);
 		PriorityQueue<MyPoint> queue = new PriorityQueue<MyPoint>(prevQueue);
 		for (int i=0; i < reps; i++) {
@@ -556,6 +572,7 @@ public class MLPaintPanel extends JComponent
 			}
 		}
 		listQueues.add(queue);
+		t = reportTime(t, "Grow Dijkstra by one step.");
 	}
 
 	private boolean isXYOutsideImage(int x, int y) {
@@ -694,6 +711,7 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
+		initializeFreshPaint();
 		repaint();
 	}
 
