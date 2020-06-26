@@ -9,10 +9,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Area;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.NoninvertibleTransformException;
+import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
@@ -57,7 +54,7 @@ public class MLPaintPanel extends JComponent
 
 	private static final Color SUGGESTION_COLOR = Color.YELLOW;
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
-	private static final double QUEUE_GROWTH = 0.2;
+	private static final double QUEUE_GROWTH = 0.2/9.0;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -79,11 +76,14 @@ public class MLPaintPanel extends JComponent
 	private Integer freshPaintNumPositives = null;//GROK: run by classifier
 	private Area freshPaintArea = new Area();
 	private Area antiPaintArea = new Area();
+	private List<Point2D> dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
 
 	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
 	public double brushRadius = radiusFromChDigit('1');
 
 	private SoftClassifier<double[]> classifier;
+	private final int maxPositives = 6000;
+	private final int maxNegatives = 12000;
 
 	/** classifier output image, grayscale */
 	public BufferedImage classifierOutput; //GROK: Why was this made private?
@@ -91,10 +91,13 @@ public class MLPaintPanel extends JComponent
 	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
 	 */
-	private double[][] distances;
+	private float[][] distances;
+	private float[][] spareDistances = null; //= new double[width][height];
 	public double scorePower = 3.0;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
+	private int dijkstraStep = 3; // For squares of 9 //This could be optimized so that if we zoom in
+	//MAYDO: Optimize this to go even bigger when we're on huge scale and shrink to 1 when we are zoomed in.
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
 	public BufferedImage proposed;
@@ -149,12 +152,8 @@ public class MLPaintPanel extends JComponent
 			Preconditions.checkArgument(width  == im.getWidth() && height == im.getHeight(),
 					"The extra layer size does not match the image size.");
 		});
-		distances = new double[width][height];
-		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		initializeFreshPaint();
-		freshPaintNumPositives = null;
-		classifier = null;
-		classifierOutput = null;
+
 		setPreferredSize(new Dimension(width, height));
 		resetView();
 	}
@@ -175,6 +174,13 @@ public class MLPaintPanel extends JComponent
 		queueBoundsIdx = -1;
 		freshPaintArea = new Area();
 		antiPaintArea = new Area();
+		dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
+
+		distances = null;
+		freshPaintNumPositives = null;
+		classifier = null;
+		classifierOutput = null;
+		t = reportTime(t, "We have made distances null, among other things.");
 		repaint();
 	}
 
@@ -340,6 +346,7 @@ public class MLPaintPanel extends JComponent
 	private void brushFreshPaint(MouseEvent e, boolean isNegative) {
 		long t = System.currentTimeMillis();
 		int index = isNegative ? FRESH_NEG : FRESH_POS;
+		Point2D mousePoint = new Point2D.Double((double) e.getX(), (double) e.getY());
 		Ellipse2D brush = new Ellipse2D.Double(
 				e.getX() - brushRadius, 
 				e.getY() - brushRadius, 
@@ -350,6 +357,7 @@ public class MLPaintPanel extends JComponent
 		g.setColor(color);
 		try {
 			AffineTransform inverse = view.createInverse();
+			dijkstraPossibleSeeds.add(inverse.transform(mousePoint, null));
 			g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
 			g.fill(brush);
 			g.dispose();
@@ -439,18 +447,17 @@ public class MLPaintPanel extends JComponent
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 
 		// feature vectors of positive & negative training examples
-		List<double[]> positives = Lists.newArrayListWithCapacity(50000);
-		List<double[]> negatives = Lists.newArrayListWithCapacity(50000);
+		// but only [x,y] at first. Then we shorten and transform.
+		List<int[]> positives = Lists.newArrayListWithCapacity(70000);
+		List<int[]> negatives = Lists.newArrayListWithCapacity(7000);
 
 		// extract positive examples from each fresh paint pixel that is 1
 		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
 		int[] histogram = new int[4];
 		Rectangle f = freshPaintArea.getBounds();
-		f.add(antiPaintArea.getBounds());
-		System.out.printf("Here is top x: %,d",f.x);
-		System.out.printf("Here is top y: %,d",f.y);
-		System.out.printf("Here is width: %,d",f.width);
-		System.out.printf("Here is height: %,d",f.height);
+		if (!antiPaintArea.isEmpty()) {
+			f.add(antiPaintArea.getBounds());
+		}
 		int floory = f.y < 0 ? 0 : f.y ;
 		int capy = f.y + f.height + 1 > height ? height : f.y + f.height + 1;
 		int floorx = f.x < 0 ? 0 : f.x;
@@ -458,56 +465,78 @@ public class MLPaintPanel extends JComponent
 		if (capx == width || capy == height || floory == 0 || floorx == 0) {
 			System.out.println("We flew to a world edge to constrain our feature vector collection.");
 		}
+		System.out.printf("Here is top x: %,d",f.x);
+		System.out.printf("Here is top y: %,d",f.y);
+		System.out.printf("Here is width: %,d",f.width);
+		System.out.printf("Here is height: %,d",f.height);
 		System.out.printf("Here is floory: %,d",floory);
 		System.out.printf("Here is capy: %,d",capy);
 		System.out.printf("Here is floorx: %,d",floorx);
 		System.out.printf("Here is capx: %,d",capx);
+		t = reportTime(t, "Setup using the Shape Area bounds, freshpaint, etc.");
 		for (int x = floorx; x < capx; x++) {
 			for (int y = floory; y < capy; y++) {
 				int index = rawdata.getSample(x, y, 0);// band 0
 				if (index == FRESH_POS) {
-					positives.add(getFeatureVector(x,y));
+					positives.add( new int[]{x,y} );
 				} else if (index == FRESH_NEG) {
-					negatives.add(getFeatureVector(x,y));
+					negatives.add( new int[]{x,y} );
 				}
 				histogram[index]++;
 			}
 		}
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
-		int npos = positives.size();
-		int nneg = negatives.size();
-		freshPaintNumPositives = npos;//GROK
-		t = reportTime(t, "We got the feature vector for each of the pixels in the image.\n" +
+		freshPaintNumPositives = positives.size();
+
+		int npos1 = positives.size();
+		int nneg1 = negatives.size();
+		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
 						"extracted %,d positives %,d negatives from %s x %s fresh paint",
-				npos, nneg, width, height);
-		if (npos < 30) {// not enough
+				npos1, nneg1, width, height);
+		if (npos1 < 30) {// not enough
 			return;// silently return
 		}
-		
 		//TODO: smarter testing / picking
 		//thoughts: Area provides getBounds rectangle, we could choose within that or at least a few times that.
 		// if not enough negatives, add additional negatives collected randomly
 		Random rand = new Random();
-		while (negatives.size() < 2 * npos) {// try 2x or 3x as many negatives
+		while (negatives.size() <= 2 * npos1 && negatives.size() <= maxNegatives) {// try 2x or 3x as many negatives
 			int x = rand.nextInt(width);
 			int y = rand.nextInt(height);
 			int index = rawdata.getSample(x, y, 0);// returns 0 or 1
 			if (index == FRESH_UNLABELED) {
-				negatives.add(getFeatureVector(x, y));
+				negatives.add(new int[]{x,y});
 			}
 		}
-		nneg = negatives.size();
-		t = reportTime(t, "Boosted the number of negative feature vectors to %,d",nneg);
+		nneg1 = negatives.size();
+		t = reportTime(t, "We got indexes of enough negatives to complement the positives fully.");
+
+		Collections.shuffle(positives);
+		Collections.shuffle(negatives);
+		t = reportTime(t, "We shuffled the xy lists.");
+		List<double[]> positiveFvs = Lists.newArrayListWithCapacity(maxPositives);
+		List<double[]> negativeFvs = Lists.newArrayListWithCapacity(maxNegatives);
+		for (int i=0; i < Math.min(maxPositives, npos1); i++) {
+			positiveFvs.add(getFeatureVector(positives.get(i)));
+		}
+		for (int i=0; i < Math.min(maxNegatives, nneg1); i++) {
+			negativeFvs.add(getFeatureVector(negatives.get(i)));
+		}
+
+
+		int npos = positiveFvs.size();
+		int nneg = negativeFvs.size();
+		int nFeatures = positiveFvs.get(0).length;
+		int nall = npos + nneg;
+		t = reportTime(t, "Converted all the xy to feature vectors, %,d pos and %,d neg.",npos,nneg);
 
 		// Convert dataset into SMILE format
-		int nFeatures = positives.get(0).length;
-		int nall = npos + nneg;
-		double[][] fvs = Streams.concat(positives.stream(), negatives.stream())
+		double[][] fvs = Streams.concat(positiveFvs.stream(), negativeFvs.stream())
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
 				.map(i -> i < npos ? 1 : 0)// positives first
 				.toArray();
-		
+
 		// train the SVM or whatever model
 		t = reportTime(t, "converted data to train classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
@@ -515,7 +544,7 @@ public class MLPaintPanel extends JComponent
 		double C = 1.0;//TODO
 		double lambda = 0.1;// 
 		double tolerance = 1e-5;
-		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
+		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
 		// classifier = SVM.fit(fvs, ylabels, C, tolerance);
 		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
 		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
@@ -525,7 +554,12 @@ public class MLPaintPanel extends JComponent
 			classifierOutput = runClassifier();
 		}
 	}
-	
+
+	private double[] getFeatureVector(int[] xy) {
+		Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
+		return getFeatureVector(xy[0],xy[1]);
+	}
+
 	private double[] getFeatureVector(int x, int y) {
 		//MAYDO: iff this gets to be the CPU bottleneck, then we could cache answers
 		Color clr = new Color(image.getRGB(x, y));
@@ -541,24 +575,27 @@ public class MLPaintPanel extends JComponent
 
 	private void initDijkstra() {
 		long t = System.currentTimeMillis();
-		// set all of doubles[width][height] to +INF
-		for (double[] row: distances) {
-			Arrays.fill(row, Double.POSITIVE_INFINITY);
-		}
+		// set all of doubles[width][height] to ZERO. Should be done beforehand with the initializeFreshPaint.
+		distances = getNewDistances();
+		t = reportTime(t, "Initialized Dijkstra distances matrix to 0, width x height, %,d x %,d",
+				width, height);
 		// initialize empty listQueues for fuelCost MyPoints
 		listQueues = new ArrayList<PriorityQueue<MyPoint>>();
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
 		// Add seedPoints to the queue and thence to distances  MAYDO: More than one
 		for (MyPoint item: getDijkstraSeedPoints()) {
 			queue.add(item);
-			distances[item.x][item.y] = item.fuelCost;
+			distances[item.x][item.y] = (float) item.fuelCost;
 		}
 		listQueues.add(queue);
+		t = reportTime(t, "Initialized the queue.");
+
 		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
+		t = reportTime(t, "");
 		for (int i=0; i<20; i++) {
 			growDijkstra(repsIncrement);
 		}
-		t = reportTime(t, "Initialized Dijkstra total time.");
+		t = reportTime(t, "Initialized Dijkstra with 20 growDijkstras.");
 	}
 
 	/* Given existence of distances only up till this point,
@@ -574,33 +611,21 @@ public class MLPaintPanel extends JComponent
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
 			MyPoint choicePoint = queue.poll(); //Maydo: bugsafe this
-			int[][] adjFour = {		{choicePoint.x,choicePoint.y+1},
-									{choicePoint.x,choicePoint.y-1},
-									{choicePoint.x+1,choicePoint.y},
-									{choicePoint.x-1,choicePoint.y}};
+			int[][] adjFour = {		{choicePoint.x,choicePoint.y+dijkstraStep},
+									{choicePoint.x,choicePoint.y-dijkstraStep},
+									{choicePoint.x+dijkstraStep,choicePoint.y},
+									{choicePoint.x-dijkstraStep,choicePoint.y}};
 			//		for (x,y) in [(x+1,y), (x-1,y), (x,y+1), (x,y-1)]:
 			for (int[] pair : adjFour) {
 				int xmine = pair[0];
 				int ymine = pair[1];
 				if (isXYOutsideImage(xmine, ymine)) continue; //	if isOutsideImage: continue
-				if (distances[xmine][ymine] == Double.POSITIVE_INFINITY) { //Maydo: consider safer way to tell it's new
-					double proposedCost = getEdgeDistance(xmine, ymine) + distances[choicePoint.x][choicePoint.y];
+				if (distances[xmine][ymine] == 0) { //Maydo: consider safer way to tell it's new
+					double proposedCost = getEdgeDistance(xmine, ymine) + (double) distances[choicePoint.x][choicePoint.y];
 					MyPoint queuePoint = new MyPoint(proposedCost,xmine, ymine);
 					queue.add(queuePoint);
-					distances[queuePoint.x][queuePoint.y] = queuePoint.fuelCost;
+					fillDistancesBiggerXY(proposedCost, queuePoint.x, queuePoint.y, dijkstraStep);
 				}
-			//			proposedCost = getEdgeDistance(x,y)+totalDistancesRegion[choicePoint]
-			//			If proposedCost < getTotalDistance(x,y):
-			//				If (x,y) in totalDistancesRegion:
-			//					throw Exception, Dijkstra understanding is faulty for shortest paths held in totalDistancesRegion
-			//				Else if (x,y) in queue:
-			//					throw Exception, Dijkstra understanding is faulty for shortest paths held in queue
-			//				Else (therefore, totalDistancesRegion[x,y] == INF):
-			//					totalDistancesRegion[(x,y)] = getTotalDistance((x,y)))
-			//					add (x,y) to the queue at this totalDistance
-			//			Else: Do nothing.
-			//					No need to update any distance.
-			//					Anything needing added to the queue would have had INF distance.
 			}
 		}
 		listQueues.add(queue);
@@ -610,6 +635,29 @@ public class MLPaintPanel extends JComponent
 	private boolean isXYOutsideImage(int x, int y) {
 		boolean failure = (x < 0 || y < 0 || x >= width || y >= height);
 		return failure;
+	}
+
+	/** Fill in a _x_ patch in the distances array with a cost. Ensure not too big.
+	 * I assume that x,y is within the bounds. */
+	private void fillDistancesBiggerXY(double proposedCost, int x, int y, int dijkstraStep) {
+		int greaterx = Math.min(x + dijkstraStep, width);
+		int greatery = Math.min(y + dijkstraStep, height);
+		for (int i=x; i < greaterx; i++) {
+			for (int j=y; j < greatery; j++) {
+				distances[i][j] = (float) proposedCost;
+			}
+		}
+	}
+
+	private float[][] getNewDistances() {
+		float[][] rr;
+		if (spareDistances == null) {
+			rr = new float[width][height];
+		} else {
+			rr = spareDistances;
+			spareDistances = null;
+		}
+		return rr; //Idea: get a new distances on a hidden thread after
 	}
 
 	//This is not needed
@@ -663,23 +711,25 @@ public class MLPaintPanel extends JComponent
 	 * 	Maydo: Do not allow a suggestion outside of view
 	 * 	Maydo: Get connected components and for each get a lowest classifier score
 	 */
-	private ArrayList<MyPoint> getDijkstraSeedPoints() {
+	private List<MyPoint> getDijkstraSeedPoints() {
 		WritableRaster rawData = freshPaint.getRaster();
 		WritableRaster labels0 = labels.getRaster();
+		System.out.printf("Possible seedPoints for Dijkstra is length %,d.",dijkstraPossibleSeeds.size());
 		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {						//& fill the queue with fresh paint locations @ fuel cost 0
-				int index = rawData.getSample(x, y, 0);// 0 or 1
-				int driedLabel = labels0.getSample(x,y,0);
-				if (index == FRESH_POS && driedLabel == UNLABELED) {
-					double score0 = getClassifierProbNeg(x,y);
-					if (score0 < smallest.fuelCost) {
-						smallest = new MyPoint(score0,x,y);
-					}
+		for (Point2D p2 : dijkstraPossibleSeeds) {
+			int x = (int) p2.getX();
+			int y = (int) p2.getY();
+
+			int index = rawData.getSample(x, y, 0);// 0 or 1
+			int driedLabel = labels0.getSample(x,y,0);
+			if (index == FRESH_POS && driedLabel == UNLABELED) {
+				double score0 = getClassifierProbNeg(x,y);
+				if (score0 < smallest.fuelCost) {
+					smallest = new MyPoint(score0,x,y);
 				}
 			}
 		}
-		ArrayList<MyPoint> rr = new ArrayList<MyPoint>();
+		List<MyPoint> rr = new ArrayList<MyPoint>();
 		rr.add(smallest);
 		return rr;
 	}
@@ -739,14 +789,15 @@ public class MLPaintPanel extends JComponent
 		WritableRaster labels0 = labels.getRaster();
 		for (int x=0; x<width; x++){
 			for (int y=0; y<height; y++){
-				if (distances[x][y] < thresholdDistance) {
+				float distance = distances[x][y];
+				if (distance < thresholdDistance && distance > 0) {
 					labels0.setSample( x, y, 0, labelIndex);
 				}
 			}
 		}
 		initializeFreshPaint();
 		repaint();
-		t = reportTime(t, "We wrote the suggestion to labels via distances[][] less than threshold.");
+		t = reportTime(t, "We wrote the suggestion to labels via distances[][] < threshold & >0.");
 	}
 
 	private double getThresholdDistance() {
