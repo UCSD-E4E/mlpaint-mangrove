@@ -14,6 +14,13 @@ public class Utils {
 		return i < 0 ? "" : s.substring(i + separator.length());
 	}
 
-
+	/** Integer power function */
+	public static int intPow(int a, int b) { //https://stackoverflow.com/a/8071402/13773745
+		int result = 1;
+		for (int i = 1; i <= b; i++) {
+			result *= a;
+		}
+		return result;
+	}
 	
 }
