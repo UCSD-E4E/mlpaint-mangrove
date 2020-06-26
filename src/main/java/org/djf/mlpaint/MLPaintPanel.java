@@ -153,6 +153,7 @@ public class MLPaintPanel extends JComponent
 					"The extra layer size does not match the image size.");
 		});
 		initializeFreshPaint();
+		distances = new float[width][height];
 
 		setPreferredSize(new Dimension(width, height));
 		resetView();
@@ -171,16 +172,14 @@ public class MLPaintPanel extends JComponent
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		t = reportTime(t, "We have made a new freshpaint image.");
 		listQueues = null;
-		queueBoundsIdx = -1;
+		queueBoundsIdx = 19;
 		freshPaintArea = new Area();
 		antiPaintArea = new Area();
 		dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
 
-		distances = null;
-		freshPaintNumPositives = null;
+		freshPaintNumPositives = null; //MAYDO: Make sure the user can't label with zero while no fresh paint.
 		classifier = null;
 		classifierOutput = null;
-		t = reportTime(t, "We have made distances null, among other things.");
 		repaint();
 	}
 
@@ -236,7 +235,6 @@ public class MLPaintPanel extends JComponent
 			trainClassifier();
 			//classifierOutput = runClassifier();
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
-			queueBoundsIdx = listQueues.size()-1;
 		}
 		mousePrev = null;
 		repaint();
@@ -357,7 +355,9 @@ public class MLPaintPanel extends JComponent
 		g.setColor(color);
 		try {
 			AffineTransform inverse = view.createInverse();
-			dijkstraPossibleSeeds.add(inverse.transform(mousePoint, null));
+			if (!isNegative) {
+				dijkstraPossibleSeeds.add(inverse.transform(mousePoint, null));
+			}
 			g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
 			g.fill(brush);
 			g.dispose();
@@ -411,7 +411,7 @@ public class MLPaintPanel extends JComponent
 		if (listQueues != null && queueBoundsIdx >= 0) {
 			g2.setColor(SUGGESTION_COLOR); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				g2.drawRect(edgePoint.x,edgePoint.y,1,1);
+				g2.drawRect(edgePoint.x,edgePoint.y,2,2);
 			}
 			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
@@ -576,9 +576,9 @@ public class MLPaintPanel extends JComponent
 	private void initDijkstra() {
 		long t = System.currentTimeMillis();
 		// set all of doubles[width][height] to ZERO. Should be done beforehand with the initializeFreshPaint.
-		distances = getNewDistances();
-		t = reportTime(t, "Initialized Dijkstra distances matrix to 0, width x height, %,d x %,d",
-				width, height);
+		setDistancesZero(distances);
+		t = reportTime(t, "Set Dijkstra distances matrix to 0, width x height, %,d x %,d",
+				distances.length, distances[0].length);
 		// initialize empty listQueues for fuelCost MyPoints
 		listQueues = new ArrayList<PriorityQueue<MyPoint>>();
 		PriorityQueue<MyPoint> queue = new PriorityQueue<>(1000);// lowest totalCost first
@@ -592,7 +592,7 @@ public class MLPaintPanel extends JComponent
 
 		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
 		t = reportTime(t, "");
-		for (int i=0; i<20; i++) {
+		for (int i=0; i<queueBoundsIdx +1; i++) {
 			growDijkstra(repsIncrement);
 		}
 		t = reportTime(t, "Initialized Dijkstra with 20 growDijkstras.");
@@ -649,15 +649,11 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	private float[][] getNewDistances() {
-		float[][] rr;
-		if (spareDistances == null) {
-			rr = new float[width][height];
-		} else {
-			rr = spareDistances;
-			spareDistances = null;
+	private void setDistancesZero(float[][] x) {
+		for (float[] row: x) {
+			Arrays.fill(row, (float) 0.0);
 		}
-		return rr; //Idea: get a new distances on a hidden thread after
+		return;
 	}
 
 	//This is not needed
@@ -712,25 +708,40 @@ public class MLPaintPanel extends JComponent
 	 * 	Maydo: Get connected components and for each get a lowest classifier score
 	 */
 	private List<MyPoint> getDijkstraSeedPoints() {
-		WritableRaster rawData = freshPaint.getRaster();
-		WritableRaster labels0 = labels.getRaster();
 		System.out.printf("Possible seedPoints for Dijkstra is length %,d.",dijkstraPossibleSeeds.size());
-		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
+//		WritableRaster rawData = freshPaint.getRaster();
+//		WritableRaster labels0 = labels.getRaster();
+//		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
+//		for (Point2D p2 : dijkstraPossibleSeeds) {
+//			int x = (int) p2.getX();
+//			int y = (int) p2.getY();
+//			if (isXYOutsideImage(x,y)) continue;
+//
+//			int index = rawData.getSample(x, y, 0);// 0 or 1
+//			int driedLabel = labels0.getSample(x,y,0);
+//			if (index == FRESH_POS && driedLabel == UNLABELED) {
+//				double score0 = getClassifierProbNeg(x,y);
+//				if (score0 < smallest.fuelCost) {
+//					smallest = new MyPoint(score0,x,y);
+//				}
+//			}
+//		}
+//		List<MyPoint> rr = new ArrayList<MyPoint>();
+//		rr.add(smallest);
+//		return rr;
+
+		List<MyPoint> rr = new ArrayList<MyPoint>();
+		WritableRaster labels0 = labels.getRaster();
 		for (Point2D p2 : dijkstraPossibleSeeds) {
 			int x = (int) p2.getX();
 			int y = (int) p2.getY();
+			x -= x%dijkstraStep;
+			y -= y%dijkstraStep;
+			if (isXYOutsideImage(x, y)) continue;
+			if (labels0.getSample(x,y,0) != UNLABELED) continue;
 
-			int index = rawData.getSample(x, y, 0);// 0 or 1
-			int driedLabel = labels0.getSample(x,y,0);
-			if (index == FRESH_POS && driedLabel == UNLABELED) {
-				double score0 = getClassifierProbNeg(x,y);
-				if (score0 < smallest.fuelCost) {
-					smallest = new MyPoint(score0,x,y);
-				}
-			}
+			rr.add(new MyPoint(1.0, x,y));
 		}
-		List<MyPoint> rr = new ArrayList<MyPoint>();
-		rr.add(smallest);
 		return rr;
 	}
 
