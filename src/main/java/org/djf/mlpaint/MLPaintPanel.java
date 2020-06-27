@@ -51,7 +51,7 @@ public class MLPaintPanel extends JComponent
 	private static final int FRESH_UNLABELED = 0; //Index zero for unlabeled is special: it initializes to zero.
 	private static final int FRESH_POS = 1;
 	private static final int FRESH_NEG = 2;
-	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHARED, SwingUtil.ALPHABLUE};
+	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.CYAN, Color.RED, SwingUtil.ALPHABLUE};
 
 	private static final Color SUGGESTION_COLOR = Color.YELLOW;
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
@@ -112,6 +112,7 @@ public class MLPaintPanel extends JComponent
 
 	/** clients can toggle this property and we automatically repaint() */
 	public final SimpleBooleanProperty showClassifier = new SimpleBooleanProperty();
+	private Point2D cursor;
 
 
 	public MLPaintPanel() {
@@ -244,6 +245,7 @@ public class MLPaintPanel extends JComponent
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
+		cursor = e.gePoint();
 	}
 
 	@Override
@@ -428,13 +430,22 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
 
 		//Draw the fresh paint.
-		IndexColorModel cm = (IndexColorModel) freshPaint.getColorModel();
-		g2.setColor(new Color(cm.getRGB(FRESH_POS)));
-		g2.fill(freshPaintArea);
-		g2.setColor(new Color(cm.getRGB(FRESH_NEG)));
-		g2.fill(antiPaintArea);
-		//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		t = reportTime(t, "Fresh paint drawn.");
+		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
+		boolean asImage = false;
+		if (asImage) {
+			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
+			g2.fill(freshPaintArea);
+			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+			g2.fill(antiPaintArea);
+			//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+			t = reportTime(t, "Fresh paint drawn.");
+		} else { // Just draw outline using area
+			g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
+			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
+			g2.draw(freshPaintArea);
+			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+			g2.draw(antiPaintArea);
+		}
 
 		g2.dispose();
 	}
