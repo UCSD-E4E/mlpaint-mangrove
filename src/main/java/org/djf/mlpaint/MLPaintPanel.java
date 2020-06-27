@@ -445,26 +445,25 @@ public class MLPaintPanel extends JComponent
 	
 	/** Extract training set and train. */
 	public void trainClassifier() {
+		long t = System.currentTimeMillis()
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 
 		// feature vectors of positive & negative training examples
 		// but only [x,y] at first. Then we shorten and transform.
-		List<int[]> positives = Lists.newArrayListWithCapacity(70000);
-		List<int[]> negatives = Lists.newArrayListWithCapacity(7000);
+
 
 		// extract positive examples from each fresh paint pixel that is FRESH_POS, negative if negative
 		Rectangle f = freshPaintArea.getBounds();
-		if (!antiPaintArea.isEmpty()) {
-			f.add(antiPaintArea.getBounds());
-		}
-		long t = sampleFreshPosNeg(rawdata, positives, negatives);
-
+		List<int[]> positives = sampleFreshPosNeg(rawdata, f, FRESH_POS, maxPositives);
 		int npos1 = positives.size();
-		int nneg1 = negatives.size();
-		freshPaintNumPositives = npos1;
-		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
-						"extracted %,d positives %,d negatives from %s x %s fresh paint",
-				npos1, nneg1, width, height);
+
+		Rectangle g = antiPaintArea.getBounds();
+		List<int[]> negatives = sampleFreshPosNeg(rawdata, f, FRESH_NEG, maxNegatives);//optimize
+		int npos1 = positives.size();
+
+
+		t = reportTime(t, "Total time for xys obtained for positives and negatives.");
+
 		if (npos1 < 30) {// not enough
 			return;// silently return
 		}
@@ -527,9 +526,12 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	private long sampleFreshPosNeg(WritableRaster rawdata, Rectangle f,
-								   List<int[]> acquisitions, int code, int hopedSampleSize) {
+	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f,
+										  int code, int hopedSampleSize) {
 		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
+		List<int[]> acquisitions = Lists.newArrayListWithCapacity(hopedSampleSize);
+
+		if (f.isEmpty()) return acquisitions;
 
 		int floory = f.y < 0 ? 0 : f.y ;
 		int capy = f.y + f.height + 1 > height ? height : f.y + f.height + 1;
@@ -590,11 +592,17 @@ public class MLPaintPanel extends JComponent
 
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 
-		int nacquired = acquisitions.size();
+		int nacquired = histogram[code];
+
+		if (code == FRESH_POS) {
+			int estimateTotal = (int) area * ( histogram[code] / Arrays.stream(histogram).sum() );
+			freshPaintNumPositives = estimateTotal;
+		}
+
 		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
-						"extracted %,d positives %,d negatives from %s x %s fresh paint",
-				npos1, nneg1, width, height);
-		return nacquired;
+						"extracted %,d of code %,d from %s x %s bounds for fresh paint",
+				nacquired, code, (capx-floorx), (capy - floory));
+		return acquisitions;
 	}
 
 	private void extendRelations(List<int[]> relations, int j, int upx, int upy) {
