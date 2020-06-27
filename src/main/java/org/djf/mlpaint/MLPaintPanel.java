@@ -453,6 +453,10 @@ public class MLPaintPanel extends JComponent
 		List<int[]> negatives = Lists.newArrayListWithCapacity(7000);
 
 		// extract positive examples from each fresh paint pixel that is FRESH_POS, negative if negative
+		Rectangle f = freshPaintArea.getBounds();
+		if (!antiPaintArea.isEmpty()) {
+			f.add(antiPaintArea.getBounds());
+		}
 		long t = sampleFreshPosNeg(rawdata, positives, negatives);
 
 		int npos1 = positives.size();
@@ -523,13 +527,10 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	public long sampleFreshPosNeg(WritableRaster rawdata, List<int[]> positives, List<int[]> negatives) {
+	private long sampleFreshPosNeg(WritableRaster rawdata, Rectangle f,
+								   List<int[]> acquisitions, int code, int hopedSampleSize) {
 		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
-		int[] histogram = new int[4];
-		Rectangle f = freshPaintArea.getBounds();
-		if (!antiPaintArea.isEmpty()) {
-			f.add(antiPaintArea.getBounds());
-		}
+
 		int floory = f.y < 0 ? 0 : f.y ;
 		int capy = f.y + f.height + 1 > height ? height : f.y + f.height + 1;
 		int floorx = f.x < 0 ? 0 : f.x;
@@ -537,43 +538,20 @@ public class MLPaintPanel extends JComponent
 		if (capx == width || capy == height || floory == 0 || floorx == 0) {
 			System.out.println("We flew to a world edge to constrain our feature vector collection.");
 		}
-		System.out.printf("Here is top x: %,d",f.x);
-		System.out.printf("Here is top y: %,d",f.y);
-		System.out.printf("Here is width: %,d",f.width);
-		System.out.printf("Here is height: %,d",f.height);
-		System.out.printf("Here is floory: %,d",floory);
-		System.out.printf("Here is capy: %,d",capy);
-		System.out.printf("Here is floorx: %,d",floorx);
-		System.out.printf("Here is capx: %,d",capx);
+		System.out.printf("Here is top x: %,d. \n",f.x);
+		System.out.printf("Here is top y: %,d. \n",f.y);
+		System.out.printf("Here is width: %,d. \n",f.width);
+		System.out.printf("Here is height: %,d. \n",f.height);
+		System.out.printf("Here is floory: %,d. \n",floory);
+		System.out.printf("Here is capy: %,d. \n",capy);
+		System.out.printf("Here is floorx: %,d. \n",floorx);
+		System.out.printf("Here is capx: %,d. \n",capx);
 		t = reportTime(t, "Setup using the Shape Area bounds, freshpaint, etc.");
 
-
-		for (int x = floorx; x < capx; x++) {
-			for (int y = floory; y < capy; y++) {
-				int index = rawdata.getSample(x, y, 0);// band 0
-				if (index == FRESH_POS) {
-					positives.add( new int[]{x,y} );
-				} else if (index == FRESH_NEG) {
-					negatives.add( new int[]{x,y} );
-				}
-				histogram[index]++;
-			}
-		}
-
-		//IDEA one: incremental resolution, solves all
-
-		//IDEA two: random order of all _x_ xy
-
-		//IDEA three: incremental resolution of rows: Read them all in.
-
-		//IDEA four: Make a smart guess at the sampling grid.
-
-		//IDEA five: choose the siize of square to downsample cleverly, and then within that square pick the next xy;
-		// 100 times faster would be squares of size 10;
-		// 400 times faster would be squares of size 20;
 		// 1) Get a good grid size: Area / gridLength^2 < maxPositives/10
 		int gridLength = 1;
-		while (area / Math.pow(gridLength, 2) > hopedSampleSize/20) {
+		int area = (capx - floorx)*(capy - floory);
+		while (area / Math.pow(gridLength, 2) > hopedSampleSize/50) {
 			gridLength *= 2;
 		}
 		// 2) Get a list of XY relational points to visit
@@ -586,29 +564,37 @@ public class MLPaintPanel extends JComponent
 			extendRelations(relations, j, sep,0);
 			extendRelations(relations, j, 0, sep);
 		}
+
 		// 3) While acquisitions are lower than desired, scan through the area at gridLength resolution
+		int[] histogram = new int[4];
 		for (int[] offset : relations) {
 			if (acquisitions.size() >= hopedSampleSize) {
 				break;
 			}
 			int upx = offset[0];
 			int upy = offset[1];
-			for (int x = floorx; x < capx; x+= gridLength) {
-				for (int y = floory; y < capy; y+= gridLength) {
+			for (int i = floorx; i < capx; i+= gridLength) {
+				int x = i + upx;
+				if (x >= capx) continue;
+				for (int j = floory; j < capy; j+= gridLength) {
+					int y = j + upy;
+					if (y >= capy) continue;
 					int index = rawdata.getSample(x, y, 0);// band 0
-					if (index == FRESH_POS) {
-						positives.add( new int[]{x,y} );
-					} else if (index == FRESH_NEG) {
-						negatives.add( new int[]{x,y} );
+					if (index == code) {
+						acquisitions.add(new int[]{x, y});
 					}
 					histogram[index]++;
 				}
 			}
-		// 4) For each scan, add a relational amount to the X and the Y.
 		}
 
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
-		return t;
+
+		int nacquired = acquisitions.size();
+		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
+						"extracted %,d positives %,d negatives from %s x %s fresh paint",
+				npos1, nneg1, width, height);
+		return nacquired;
 	}
 
 	private void extendRelations(List<int[]> relations, int j, int upx, int upy) {
@@ -698,7 +684,10 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private boolean isXYOutsideImage(int x, int y) {
-		boolean failure = (x < 0 || y < 0 || x >= width || y >= height);
+		return isXYOutsideRect(x,y, 0, 0, width, height);
+	}
+	private boolean isXYOutsideRect(int x, int y, int minx, int miny, int capx, int capy) {
+		boolean failure = (x < minx || y < miny || x >= capx || y >= capy);
 		return failure;
 	}
 
