@@ -455,7 +455,7 @@ public class MLPaintPanel extends JComponent
 		int npos1 = positives.size();
 
 		Rectangle g = antiPaintArea.getBounds();
-		List<int[]> negatives = sampleFreshPosNeg(rawdata, f, FRESH_NEG, maxNegatives / 2);//MAYDO: Random vs. intentional negs.
+		List<int[]> negatives = sampleFreshPosNeg(rawdata, g, FRESH_NEG, maxNegatives / 2);//MAYDO: Random vs. intentional negs.
 		int nneg1 = negatives.size();
 
 		t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.",
@@ -582,8 +582,9 @@ public class MLPaintPanel extends JComponent
 		int nacquired = histogram[code];
 
 		if (code == FRESH_POS) {
-			int estimateTotal = (int) area * ( histogram[code] / Arrays.stream(histogram).sum() );
+			int estimateTotal = (int) ( area * (double) histogram[code] / Arrays.stream(histogram).sum() );
 			freshPaintNumPositives = estimateTotal;
+			System.out.printf("We set freshPaintNumPositives to %,d. \n", estimateTotal);
 		}
 
 		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
