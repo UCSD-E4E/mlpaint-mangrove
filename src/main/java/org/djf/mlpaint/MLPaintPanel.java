@@ -54,7 +54,7 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.CYAN, Color.RED, SwingUtil.ALPHABLUE};
 
 	private static final Color SUGGESTION_COLOR = Color.YELLOW;
-	private static final double EDGE_DISTANCE_FRESH_POS = 0.0;
+	private static final double EDGE_DISTANCE_FRESH_POS = 0.001;
 	private static final double QUEUE_GROWTH = 0.2/9.0;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
@@ -79,7 +79,7 @@ public class MLPaintPanel extends JComponent
 	private Area antiPaintArea = new Area();
 	private List<Point2D> dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
 
-	/** pixel size of the brush.  TODO: do you want it measured in image space or screen space??  currently image */
+	/** pixel size of the brush.  */
 	public double brushRadius = radiusFromChDigit('1');
 
 	private SoftClassifier<double[]> classifier;
@@ -245,7 +245,7 @@ public class MLPaintPanel extends JComponent
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		cursor = e.gePoint();
+		//cursor = e.gePoint();
 	}
 
 	@Override
@@ -444,6 +444,7 @@ public class MLPaintPanel extends JComponent
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
 			g2.draw(freshPaintArea);
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+			//TODO: texture the positive paint
 			g2.draw(antiPaintArea);
 		}
 
@@ -706,7 +707,7 @@ public class MLPaintPanel extends JComponent
 		for (int i=x; i < greaterx; i++) {
 			for (int j=y; j < greatery; j++) {
 				distances[i][j] = (float) proposedCost;
-				//TODO: This currently allows for dijkstraGridLength -1 pixels of encroachment on previous labels.
+				//TODO: This currently allows for (dijkstraGridLength -1) pixels of encroachment on previous labels.
 			}
 		}
 	}
@@ -728,7 +729,7 @@ public class MLPaintPanel extends JComponent
 				int index = rawdata.getSample(x, y, 0);// 0 or 1
 				if (index == FRESH_POS) {
 					distances[x][y] = 0;
-					queue.add(new MyPoint(0.0, x, y)); //Todo: Check. Not all these are connected.
+					queue.add(new MyPoint(0.0, x, y)); //Are not all of these connected?
 				}
 			}
 		}
@@ -744,7 +745,7 @@ public class MLPaintPanel extends JComponent
 			return Double.POSITIVE_INFINITY;
 		}
 			// If freshPaint positive, return  MIN_DISTANCE_VALUE, probably 0.
-			// If freshPaint negative, return +INF //TODO:be careful young man with adding INF to INF
+			// If freshPaint negative, return +INF
 		rawdata = freshPaint.getRaster();
 		int freshPaintVal = rawdata.getSample(x,y,0);
 		if (freshPaintVal == FRESH_POS){
@@ -794,6 +795,7 @@ public class MLPaintPanel extends JComponent
 
 		List<MyPoint> rr = new ArrayList<MyPoint>();
 		WritableRaster labels0 = labels.getRaster();
+		WritableRaster fp = freshPaint.getRaster();
 		for (Point2D p2 : dijkstraPossibleSeeds) {
 			int x = (int) p2.getX();
 			int y = (int) p2.getY();
@@ -801,6 +803,7 @@ public class MLPaintPanel extends JComponent
 			y -= y%dijkstraStep;
 			if (isXYOutsideImage(x, y)) continue;
 			if (labels0.getSample(x,y,0) != UNLABELED) continue;
+			if (fp.getSample(x,y,0) != FRESH_POS) continue;
 
 			rr.add(new MyPoint(1.0, x,y));
 		}
