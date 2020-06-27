@@ -445,24 +445,21 @@ public class MLPaintPanel extends JComponent
 	
 	/** Extract training set and train. */
 	public void trainClassifier() {
-		long t = System.currentTimeMillis()
+		long t = System.currentTimeMillis();
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 
-		// feature vectors of positive & negative training examples
-		// but only [x,y] at first. Then we shorten and transform.
-
-
 		// extract positive examples from each fresh paint pixel that is FRESH_POS, negative if negative
+		// getting [x,y] pairs
 		Rectangle f = freshPaintArea.getBounds();
 		List<int[]> positives = sampleFreshPosNeg(rawdata, f, FRESH_POS, maxPositives);
 		int npos1 = positives.size();
 
 		Rectangle g = antiPaintArea.getBounds();
-		List<int[]> negatives = sampleFreshPosNeg(rawdata, f, FRESH_NEG, maxNegatives);//optimize
-		int npos1 = positives.size();
+		List<int[]> negatives = sampleFreshPosNeg(rawdata, f, FRESH_NEG, maxNegatives / 2);//MAYDO: Random vs. intentional negs.
+		int nneg1 = negatives.size();
 
-
-		t = reportTime(t, "Total time for xys obtained for positives and negatives.");
+		t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.",
+				npos1, nneg1);
 
 		if (npos1 < 30) {// not enough
 			return;// silently return
@@ -482,35 +479,26 @@ public class MLPaintPanel extends JComponent
 		nneg1 = negatives.size();
 		t = reportTime(t, "We got indexes of enough negatives to complement the positives fully.");
 
-		Collections.shuffle(positives);
-		Collections.shuffle(negatives);
-		t = reportTime(t, "We shuffled the xy lists.");
-		List<double[]> positiveFvs = Lists.newArrayListWithCapacity(maxPositives);
-		List<double[]> negativeFvs = Lists.newArrayListWithCapacity(maxNegatives);
-		for (int i=0; i < Math.min(maxPositives, npos1); i++) {
-			positiveFvs.add(getFeatureVector(positives.get(i)));
-		}
-		for (int i=0; i < Math.min(maxNegatives, nneg1); i++) {
-			negativeFvs.add(getFeatureVector(negatives.get(i)));
-		}
-
-
-		int npos = positiveFvs.size();
-		int nneg = negativeFvs.size();
-		int nFeatures = positiveFvs.get(0).length;
+		int npos = Math.min(maxPositives, npos1);
+		int nneg = Math.min(maxNegatives, nneg1);
 		int nall = npos + nneg;
-		t = reportTime(t, "Converted all the xy to feature vectors, %,d pos and %,d neg.",npos,nneg);
 
-		// Convert dataset into SMILE format
-		double[][] fvs = Streams.concat(positiveFvs.stream(), negativeFvs.stream())
+		// Convert xys to feature vectors and convert dataset into SMILE format
+		double[][] fvs = Streams.concat(positives.stream().limit( maxPositives),
+										negatives.stream().limit( maxNegatives))
+				.map(x -> getFeatureVector(x))
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
 				.map(i -> i < npos ? 1 : 0)// positives first
 				.toArray();
 
-		// train the SVM or whatever model
-		t = reportTime(t, "converted data to train classifier: %d rows x %d features, %.1f%% positive",
+		int nFeatures = fvs[0].length;
+
+		t = reportTime(t, "Converted all the xy to feature vectors, %,d pos and %,d neg.",npos,nneg);
+		t = reportTime(t, "no op -- ready to train classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
+
+		// train the SVM or whatever model
 		int maxIters = 500;
 		double C = 1.0;//TODO
 		double lambda = 0.1;// 
@@ -526,8 +514,7 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f,
-										  int code, int hopedSampleSize) {
+	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f, int code, int hopedSampleSize) {
 		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
 		List<int[]> acquisitions = Lists.newArrayListWithCapacity(hopedSampleSize);
 
