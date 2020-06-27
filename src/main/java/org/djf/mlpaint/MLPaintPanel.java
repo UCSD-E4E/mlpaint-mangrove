@@ -587,7 +587,25 @@ public class MLPaintPanel extends JComponent
 			extendRelations(relations, j, 0, sep);
 		}
 		// 3) While acquisitions are lower than desired, scan through the area at gridLength resolution
+		for (int[] offset : relations) {
+			if (acquisitions.size() >= hopedSampleSize) {
+				break;
+			}
+			int upx = offset[0];
+			int upy = offset[1];
+			for (int x = floorx; x < capx; x+= gridLength) {
+				for (int y = floory; y < capy; y+= gridLength) {
+					int index = rawdata.getSample(x, y, 0);// band 0
+					if (index == FRESH_POS) {
+						positives.add( new int[]{x,y} );
+					} else if (index == FRESH_NEG) {
+						negatives.add( new int[]{x,y} );
+					}
+					histogram[index]++;
+				}
+			}
 		// 4) For each scan, add a relational amount to the X and the Y.
+		}
 
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 		return t;
