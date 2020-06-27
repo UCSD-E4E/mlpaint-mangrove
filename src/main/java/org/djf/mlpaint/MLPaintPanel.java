@@ -61,6 +61,7 @@ public class MLPaintPanel extends JComponent
 	public BufferedImage image;
 	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
 	int width, height;
+	int JPanelWidth, JPanelHeight;
 
 	/** extra image layers:  filename & image.  Does not contain master image or labels layers.
 	 * Might have computed layers someday.
@@ -182,7 +183,9 @@ public class MLPaintPanel extends JComponent
 		freshPaintNumPositives = null; //MAYDO: Make sure the user can't label with zero while no fresh paint.
 		classifier = null;
 		classifierOutput = null;
-		repaint();
+
+		int areaProportion = (JPanelWidth*JPanelHeight / (double) width*height);
+				repaint();
 	}
 
 
@@ -311,6 +314,7 @@ public class MLPaintPanel extends JComponent
 		double x = p.getX();
 		double y = p.getY();
 		double d = e.getPreciseWheelRotation();
+		d = -d;
 		double scale = Math.pow(1.05, d);// scale +/- 5% per step, exponential
 		
 		if (e.isControlDown()) {
@@ -393,6 +397,8 @@ public class MLPaintPanel extends JComponent
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
 		System.out.printf("The JPanel is width x height, %d x %d.",getWidth(), getHeight());
+		JPanelWidth = getWidth();
+		JPanelHeight = getHeight();
 		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
 		if (image == null) {
 			g2.dispose();
@@ -670,7 +676,7 @@ public class MLPaintPanel extends JComponent
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
 			MyPoint choicePoint = queue.poll(); //Maydo: bugsafe this
-			int[][] adjFour = {		{choicePoint.x,choicePoint.y+dijkstraStep},
+			int[][] adjFour = {		{choicePoint.x,choicePoint.y+dijkstraStep}, //Maydo: 8-connectivity w/*sqrt2 penalty on diagonals
 									{choicePoint.x,choicePoint.y-dijkstraStep},
 									{choicePoint.x+dijkstraStep,choicePoint.y},
 									{choicePoint.x-dijkstraStep,choicePoint.y}};
@@ -761,7 +767,7 @@ public class MLPaintPanel extends JComponent
 
 	private double getSoftScoreDistanceTransform(double softScore) {  //
 		double out = softScore;
-		out = Math.pow(out, scorePower);
+		out = Math.pow(out, scorePower); //S-curve   exp(-x/.5)^2, worse: atan, 1/(1+x)
 		//out += 1;
 		return out;
 	}
