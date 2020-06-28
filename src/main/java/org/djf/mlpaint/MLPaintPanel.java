@@ -53,7 +53,7 @@ public class MLPaintPanel extends JComponent
 	private static final int FRESH_UNLABELED = 0; //Index zero for unlabeled is special: it initializes to zero.
 	private static final int FRESH_POS = 1;
 	private static final int FRESH_NEG = 2;
-	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.CYAN, Color.RED, SwingUtil.ALPHABLUE};
+	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.orange, Color.RED, SwingUtil.ALPHABLUE};
 
 	private static final Color SUGGESTION_COLOR = Color.YELLOW;
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.001;
@@ -417,16 +417,19 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "Image drawn.");
 		}
 
-
-
 		if (listQueues != null && queueBoundsIdx >= 0) {
-			g2.setColor(SUGGESTION_COLOR); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
+			g2.setColor(Color.white); //SwingUtil.TRANSPARENT);//(FRESH_COLORS[FRESH_UNLABELED]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				g2.drawRect(edgePoint.x,edgePoint.y,2,2);
+				g2.setColor(Color.white);
+				g2.drawRect(edgePoint.x, edgePoint.y, 3, 3);
+			}
+			g2.setColor(FRESH_COLORS[FRESH_POS]);
+			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
+				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
+				g2.fillRect(edgePoint.x, edgePoint.y, 3, 3);
 			}
 			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
-
 
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
@@ -449,11 +452,20 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "Fresh paint drawn.");
 		} else { // Just draw outline using area
 			g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
+			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+			g2.draw(antiPaintArea);
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
 			g2.draw(freshPaintArea);
-			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+//			g2.setColor(Color.white);
+//			Rectangle f = freshPaintArea.getBounds();
+//			int x = (f.x + f.width) / 2;
+//			int y = (f.y + f.height) / 2;
+//			AffineTransform m  = new AffineTransform();
+//			m.preConcatenate(AffineTransform.getTranslateInstance(-x, -y));
+//			m.preConcatenate(AffineTransform.getScaleInstance(1.01, 1.01));
+//			m.preConcatenate(AffineTransform.getTranslateInstance(x, y));
+//			g2.draw(freshPaintArea.createTransformedArea(m));
 			//TODO: texture the positive paint
-			g2.draw(antiPaintArea);
 		}
 
 		g2.dispose();
@@ -623,6 +635,11 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private double[] getFeatureVector(int... xy) {
+		//return getPatchFeatures(xy);
+		return getColorVector(xy);
+	}
+
+	private double[] getColorVector(int... xy){
 		//Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
 		int x = xy[0];
 		int y = xy[1];
@@ -638,8 +655,8 @@ public class MLPaintPanel extends JComponent
 		return rr;
 	}
 
-	private double[] getPatchFeature(int... xy) {
-		Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
+	private double[] getPatchFeatures(int... xy) {
+		//Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
 		int x = xy[0];
 		int y = xy[1];
 
@@ -656,7 +673,7 @@ public class MLPaintPanel extends JComponent
 		for (int i=xstart; i < xend; i++) {
 			for (int j=ystart; j<yend; j++) {
 				if (isXYOutsideImage(i,j)) continue;
-				double[] t = getFeatureVector(i,j);
+				double[] t = getColorVector(i,j);
 				IntStream.range(0,6).forEach(k -> {
 					fv[k].add(t[k]);
 				});
@@ -681,7 +698,7 @@ public class MLPaintPanel extends JComponent
 		// Add seedPoints to the queue and thence to distances  MAYDO: More than one
 		for (MyPoint item: getDijkstraSeedPoints()) {
 			queue.add(item);
-			distances[item.x][item.y] = (float) item.fuelCost;
+			fillDistancesBiggerXY(item.fuelCost, item.x, item.y, dijkstraStep);
 		}
 		listQueues.add(queue);
 		t = reportTime(t, "Initialized the queue.");
