@@ -19,6 +19,8 @@ import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
 
+import com.google.common.math.Stats;
+import com.google.common.math.StatsAccumulator;
 import javafx.beans.property.SimpleBooleanProperty;
 import org.djf.util.SwingUtil;
 
@@ -184,7 +186,7 @@ public class MLPaintPanel extends JComponent
 		classifier = null;
 		classifierOutput = null;
 
-		int areaProportion = (JPanelWidth*JPanelHeight / (double) width*height);
+		double areaProportion = (JPanelWidth*JPanelHeight / (double) (width*height));
 				repaint();
 	}
 
@@ -620,12 +622,10 @@ public class MLPaintPanel extends JComponent
 		}
 	}
 
-	private double[] getFeatureVector(int[] xy) {
-		Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
-		return getFeatureVector(xy[0],xy[1]);
-	}
-
-	private double[] getFeatureVector(int x, int y) {
+	private double[] getFeatureVector(int... xy) {
+		//Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
+		int x = xy[0];
+		int y = xy[1];
 		//MAYDO: iff this gets to be the CPU bottleneck, then we could cache answers
 		Color clr = new Color(image.getRGB(x, y));
         int red =   clr.getRed();
@@ -636,6 +636,36 @@ public class MLPaintPanel extends JComponent
 		Color.RGBtoHSB(red, green, blue, hsb);
 		double[] rr = {red/255.0, green/255.0, blue/255.0, hsb[0], hsb[1], hsb[2]};
 		return rr;
+	}
+
+	private double[] getPatchFeature(int... xy) {
+		Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
+		int x = xy[0];
+		int y = xy[1];
+
+		int patchEdge = 3;
+		int xstart = x - patchEdge/2;
+		int xend = xstart + patchEdge;
+		int ystart = y - patchEdge / 2;
+		int yend = ystart + patchEdge;
+
+		StatsAccumulator[] fv = IntStream.range(0,6)
+				.mapToObj(i -> new StatsAccumulator())
+				.toArray(StatsAccumulator[]::new);
+
+		for (int i=xstart; i < xend; i++) {
+			for (int j=ystart; j<yend; j++) {
+				double[] t = getFeatureVector(i,j);
+				IntStream.range(0,6).forEach(k -> {
+					fv[k].add(t[k]);
+				});
+			}
+		}
+
+		return Streams.concat(
+				Arrays.stream(fv).mapToDouble(m -> m.mean()),
+				Arrays.stream(fv).mapToDouble(m -> m.sampleStandardDeviation())
+		).toArray();
 	}
 
 	private void initDijkstra() {
