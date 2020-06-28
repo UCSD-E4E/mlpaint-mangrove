@@ -655,6 +655,7 @@ public class MLPaintPanel extends JComponent
 
 		for (int i=xstart; i < xend; i++) {
 			for (int j=ystart; j<yend; j++) {
+				if (isXYOutsideImage(i,j)) continue;
 				double[] t = getFeatureVector(i,j);
 				IntStream.range(0,6).forEach(k -> {
 					fv[k].add(t[k]);
