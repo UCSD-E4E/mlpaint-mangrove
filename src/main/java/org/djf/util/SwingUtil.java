@@ -1,6 +1,7 @@
 package org.djf.util;
 
 import java.awt.*;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
@@ -16,6 +17,7 @@ import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.stream.ImageInputStream;
 
 import com.google.common.base.Preconditions;
+import org.checkerframework.checker.units.qual.C;
 import org.djf.mlpaint.ImageResamplingDims;
 import org.djf.mlpaint.MyPoint;
 
@@ -32,7 +34,8 @@ public class SwingUtil {
 	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
 	public static final Color ALPHAGRAY = new Color(0, 0, 0, .3f);
 	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);
-
+	public static final Color SKYBLUE = new Color(41,204, 255);
+	public static final Color SKYRED = new Color(255, 119, 54);
 
 	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
 	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {
@@ -194,4 +197,6 @@ public class SwingUtil {
 		}
 		return bigImg;
 	}
+
+
 }
