@@ -25,7 +25,6 @@ import org.djf.mlpaint.MyPoint;
  * 
  */
 public class SwingUtil {
-	
 
 	public static final Color TRANSPARENT = new Color(0,0,0,0f);
 	public static final Color ALPHARED    = new Color(1,0,0,.2f);
@@ -36,6 +35,7 @@ public class SwingUtil {
 	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);
 	public static final Color SKYBLUE = new Color(41,204, 255);
 	public static final Color SKYRED = new Color(255, 119, 54);
+	public static final Color BACKGROUND_GRAY = new Color(238,238,238);
 
 	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
 	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {

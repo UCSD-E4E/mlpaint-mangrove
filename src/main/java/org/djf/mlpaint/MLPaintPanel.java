@@ -42,11 +42,11 @@ public class MLPaintPanel extends JComponent
 	implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
-	public static final int UNLABELED = 255;//0;//255; //Question: Should we put an alpha mask on the permanent labels?
-	public static final int POSITIVE = 100;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
-	public static final int NEGATIVE = 0;//2;// 0;
-	public static final int NO_DATA = 254;//1;//254;
-	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.TRANSPARENT,SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY};
+	public static final int UNLABELED = 0;//0;//255; //Question: Should we put an alpha mask on the permanent labels?
+	public static final int POSITIVE = 3;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
+	public static final int NEGATIVE = 2;//2;// 0;
+	public static final int NO_DATA = 1;//1;//254;
+	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.gray};
 	// possibly up to 16 different labels, as needed, with more colors
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
@@ -61,6 +61,7 @@ public class MLPaintPanel extends JComponent
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
+	public BufferedImage displayImage;
 	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
 	int width, height;
 	int JPanelWidth, JPanelHeight;
@@ -72,6 +73,7 @@ public class MLPaintPanel extends JComponent
 
 	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
+	private BufferedImage visLabels;
 
 	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
 	 * Colors for display are transparent & transparent-green, currently.
@@ -149,6 +151,7 @@ public class MLPaintPanel extends JComponent
 			SwingUtil.fillImage(labels, UNLABELED);
 			System.out.println("We created a blank labels object.");
 		}
+		visLabels = getDisplayLabels(labels);
 
 		extraLayers = extraLayers2;
 		Preconditions.checkArgument(width  == labels.getWidth() && height == labels.getHeight(),
@@ -189,8 +192,6 @@ public class MLPaintPanel extends JComponent
 		double areaProportion = (JPanelWidth*JPanelHeight / (double) (width*height));
 				repaint();
 	}
-
-
 
 	///////   Java Swing GUI code / callbacks
 
@@ -399,6 +400,7 @@ public class MLPaintPanel extends JComponent
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
+		System.out.print(getBackground());
 		System.out.printf("The JPanel is width x height, %d x %d.",getWidth(), getHeight());
 		JPanelWidth = getWidth();
 		JPanelHeight = getHeight();
@@ -436,8 +438,12 @@ public class MLPaintPanel extends JComponent
 		g2.drawRect(0, 0, width, height);
 		t = reportTime(t, "Pretty frame drawn.");
 
-		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
-		g2.drawImage(labels, 0, 0, null);
+		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+		//g2.drawImage(labels, 0, 0, null);
+
+		IndexColorModel visLabelCm = (IndexColorModel) visLabels.getColorModel();
+
+		g2.drawImage(visLabels, 0, 0, null);
 		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
 
 		//Draw the fresh paint.
@@ -512,6 +518,8 @@ public class MLPaintPanel extends JComponent
 		g2.setComposite(memComposite);
 		g2.setPaint(memPaint);
 		g2.setColor(memColor);
+
+		g2d.dispose();
 	}
 
 
@@ -969,6 +977,7 @@ public class MLPaintPanel extends JComponent
 			}
 		}
 		initializeFreshPaint();
+		visLabels = getDisplayLabels(labels);
 		repaint();
 		t = reportTime(t, "We wrote the suggestion to labels via distances[][] < threshold & >0.");
 	}
@@ -977,5 +986,57 @@ public class MLPaintPanel extends JComponent
 		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueBoundsIdx);
 		MyPoint lowestPoint = thisQueue.peek();
 		return lowestPoint.fuelCost;
+	}
+
+	/** Return a new image with hatchings on it from the labels   */
+	private BufferedImage getDisplayLabels(BufferedImage myLabels) {
+		BufferedImage displayLabels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
+		WritableRaster l = myLabels.getRaster();
+
+		IndexColorModel cm = (IndexColorModel) displayLabels.getColorModel();
+		Graphics2D g2 = displayLabels.createGraphics();
+
+		//Fill it all as unlabeled
+		g2.setColor( new Color(cm.getRGB(UNLABELED)));
+		g2.fillRect(0,0, width, height);
+
+//		//Make unlabeled background gray
+//		g2.setColor( new Color(cm.getRGB(NO_DATA)));
+//		for (int i=0; i < width; i++) {
+//			for (int j=0; j < height; j++) {
+//				if (l.getSample(i,j,0) == NO_DATA) {
+//					g2.fillRect(i,j,1,1);
+//				}
+//			}
+//		}
+
+		int diagonalSize = 20;
+		int[] dMod = new int[]{0, 1, diagonalSize-1};
+		List diagMod = Arrays.asList(dMod);
+
+//		//Make negatives black diagonals
+//		g2.setColor( new Color(cm.getRGB(NEGATIVE)));
+//		for (int i=0; i < width; i++) {
+//			for (int j=0; j < height; j++) {
+//				if (diagMod.contains( (i+j)%diagonalSize) ) {
+//					g2.fillRect(i,j,1,1);
+//				}
+//			}
+//		}
+//
+//		//Make positives gray hatches
+//		g2.setColor( new Color(cm.getRGB(POSITIVE)));
+//		for (int i=0; i < width; i++) {
+//			for (int j=0; j < height; j++) {
+//				if (diagMod.contains( (i+j)%diagonalSize)  || diagMod.contains( ( (width -i-1)+j)%diagonalSize) ) {
+//					g2.fillRect(i,j,1,1);
+//				}
+//			}
+//		}
+
+		System.out.println("We initialized the visLabels version of labels.");
+
+		g2.dispose();
+		return displayLabels;
 	}
 }

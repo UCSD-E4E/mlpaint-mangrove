@@ -50,6 +50,11 @@ public class MLPaintApp extends SwingApp {
 		setSize(1000, 800);// initial width, height  	//JFrame method
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);				// JFrame method
 		setVisible(true);											// JFrame method
+		try {
+			openImage();
+		} catch (IOException e) {
+			//
+		}
 	}
 
 	/** Make the control panel boxes with actions within the frame.
@@ -140,6 +145,11 @@ public class MLPaintApp extends SwingApp {
 	/*The rest of the file serves makeMenus(), providing action functions called there.*/
 
 	private void openImage(String command, ActionEvent ev) throws IOException {
+		openImage();
+	}
+
+	private void openImage() throws IOException {
+
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
