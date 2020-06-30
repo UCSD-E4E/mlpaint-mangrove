@@ -46,7 +46,8 @@ public class MLPaintPanel extends JComponent
 	public static final int POSITIVE = 3;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
 	public static final int NEGATIVE = 2;//2;// 0;
 	public static final int NO_DATA = 1;//1;//254;
-	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.gray};
+	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.lightGray};
+	public static final Color[] LABEL_HIGHLIGHTS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.lightGray, Color.BLACK};
 	// possibly up to 16 different labels, as needed, with more colors
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
@@ -440,8 +441,6 @@ public class MLPaintPanel extends JComponent
 
 		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
 		//g2.drawImage(labels, 0, 0, null);
-
-		IndexColorModel visLabelCm = (IndexColorModel) visLabels.getColorModel();
 
 		g2.drawImage(visLabels, 0, 0, null);
 		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
@@ -990,53 +989,93 @@ public class MLPaintPanel extends JComponent
 
 	/** Return a new image with hatchings on it from the labels   */
 	private BufferedImage getDisplayLabels(BufferedImage myLabels) {
-		BufferedImage displayLabels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
+		long t = System.currentTimeMillis();
+
 		WritableRaster l = myLabels.getRaster();
 
-		IndexColorModel cm = (IndexColorModel) displayLabels.getColorModel();
+		BufferedImage displayLabels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
 		Graphics2D g2 = displayLabels.createGraphics();
 
-		//Fill it all as unlabeled
-		g2.setColor( new Color(cm.getRGB(UNLABELED)));
-		g2.fillRect(0,0, width, height);
+		//Fill it all as unlabeled, unnecessary since zero initialized
+		//g2.setColor( new Color(cm.getRGB(UNLABELED)));
+		//g2.fillRect(0,0, width, height);
 
-//		//Make unlabeled background gray
-//		g2.setColor( new Color(cm.getRGB(NO_DATA)));
-//		for (int i=0; i < width; i++) {
-//			for (int j=0; j < height; j++) {
-//				if (l.getSample(i,j,0) == NO_DATA) {
-//					g2.fillRect(i,j,1,1);
-//				}
-//			}
-//		}
+		for (int i=0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				int code = l.getSample(i,j,0);
+				visLabelPointPosNegData(g2, i, j, code);
+			}
+		}
 
-		int diagonalSize = 20;
-		int[] dMod = new int[]{0, 1, diagonalSize-1};
-		List diagMod = Arrays.asList(dMod);
-
-//		//Make negatives black diagonals
-//		g2.setColor( new Color(cm.getRGB(NEGATIVE)));
-//		for (int i=0; i < width; i++) {
-//			for (int j=0; j < height; j++) {
-//				if (diagMod.contains( (i+j)%diagonalSize) ) {
-//					g2.fillRect(i,j,1,1);
-//				}
-//			}
-//		}
-//
-//		//Make positives gray hatches
-//		g2.setColor( new Color(cm.getRGB(POSITIVE)));
-//		for (int i=0; i < width; i++) {
-//			for (int j=0; j < height; j++) {
-//				if (diagMod.contains( (i+j)%diagonalSize)  || diagMod.contains( ( (width -i-1)+j)%diagonalSize) ) {
-//					g2.fillRect(i,j,1,1);
-//				}
-//			}
-//		}
-
-		System.out.println("We initialized the visLabels version of labels.");
-
+		t = reportTime(t, "We initialized the visLabels version of labels.");
 		g2.dispose();
 		return displayLabels;
 	}
+
+	private void visLabelPointPosNegData(Graphics2D g2, int i, int j, int PosNegUnCode) {
+		if (PosNegUnCode != POSITIVE && PosNegUnCode != NEGATIVE && PosNegUnCode != NO_DATA) {
+			//System.out.println("This is probably an error. \n" +
+			//		"You may have called visLabelPointPosNegData for unlabeled.");
+			return;
+		}
+		Color memColor = g2.getColor();
+		int ptSize = 1;
+
+		int diagonalSize = 10;
+		int bigDiagSize = 200;
+
+		//Make negatives black diagonals
+		int sRad = 1;
+		int sRadPlus = 2;
+		int bRad = 6;
+		int bRadPlus = 8;
+
+		boolean smallVert = i%diagonalSize <=sRad || i%diagonalSize >= diagonalSize-sRad;
+
+		boolean smallDiagonal = (i+j)%diagonalSize <=sRad || (i+j)%diagonalSize >= diagonalSize-sRad;
+		boolean bigDiagonal = (i+j)%bigDiagSize <= bRad || (i+j)%bigDiagSize >= bigDiagSize-bRad;
+
+		boolean smallRevDiagonal = (width-1-i+j)%diagonalSize <=sRad || (width-1-i+j)%diagonalSize >= diagonalSize-sRad;
+		boolean bigRevDiagonal = (width-1-i+j)%bigDiagSize <= bRad || (width-1-i+j)%bigDiagSize >= bigDiagSize-bRad;
+
+		boolean smallDiamond = smallDiagonal || smallRevDiagonal;
+		boolean bigDiamond = bigDiagonal || bigRevDiagonal;
+
+
+		boolean smallDiagonalPlus = (i+j)%diagonalSize <=sRadPlus || (i+j)%diagonalSize >= diagonalSize-sRadPlus;
+		boolean bigDiagonalPlus = (i+j)%bigDiagSize <= bRadPlus || (i+j)%bigDiagSize >= bigDiagSize-bRadPlus;
+
+		boolean smallRevDiagonalPlus = (width-1-i+j)%diagonalSize <=sRadPlus || (width-1-i+j)%diagonalSize >= diagonalSize-sRadPlus;
+		boolean bigRevDiagonalPlus = (width-1-i+j)%bigDiagSize <= bRadPlus || (width-1-i+j)%bigDiagSize >= bigDiagSize-bRadPlus;
+
+		boolean smallDiamondPlus = smallDiagonalPlus || smallRevDiagonalPlus;
+		boolean bigDiamondPlus = bigDiagonalPlus || bigRevDiagonalPlus;
+
+		if ( PosNegUnCode == NEGATIVE ) {
+			if (bigDiagonalPlus && !bigDiagonal) {
+				g2.setColor(LABEL_HIGHLIGHTS[NEGATIVE]);
+				g2.fillRect(i,j,ptSize,ptSize);
+			} else if (smallDiagonal || bigDiagonal) {
+				g2.setColor(LABEL_COLORS[NEGATIVE]);
+				g2.fillRect(i, j, ptSize, ptSize);
+			}
+		//Make positives gray hatches
+		} else if ( PosNegUnCode == POSITIVE ) {
+			if (bigDiamondPlus && !bigDiamond) {
+				g2.setColor(LABEL_HIGHLIGHTS[POSITIVE]);
+				g2.fillRect(i,j,ptSize,ptSize);
+			} else if ( smallDiamond || bigDiamond) {
+				g2.setColor(LABEL_COLORS[POSITIVE]);
+				g2.fillRect(i, j, ptSize, ptSize);
+			}
+			//Fill No Data
+		} else if (PosNegUnCode == NO_DATA) {
+			g2.setColor(LABEL_COLORS[NO_DATA]);
+			g2.fillRect(i, j, ptSize, ptSize);
+		}
+
+		g2.setColor(memColor);
+	}
+
+
 }
