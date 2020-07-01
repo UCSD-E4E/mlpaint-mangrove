@@ -460,7 +460,7 @@ public class MLPaintPanel extends JComponent
 
 		//Draw the fresh paint.
 		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
-		boolean asImage = true;
+		boolean asImage = false;
 		if (asImage) {
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
 			g2.fill(freshPaintArea);
