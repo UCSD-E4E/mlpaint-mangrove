@@ -77,6 +77,7 @@ public class MLPaintPanel extends JComponent
 	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
 	private BufferedImage visLabels;
+	boolean allowRelabel = false;
 	private static final int UNDO_MEM = 10;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
@@ -872,7 +873,7 @@ public class MLPaintPanel extends JComponent
 			// If the coordinates are already labeled in the real image, don't even consider it.
 		WritableRaster rawdata = labels.getRaster();
 		int labelsVal = rawdata.getSample(x,y,0);
-		if (labelsVal != UNLABELED){
+		if (labelsVal != UNLABELED && allowRelabel == false){
 			return Double.POSITIVE_INFINITY;
 		}
 			// If freshPaint positive, return  MIN_DISTANCE_VALUE, probably 0.
@@ -1011,6 +1012,10 @@ public class MLPaintPanel extends JComponent
 			if (xy.x > xmax) xmax = xy.x;
 			if (xy.y > ymax) ymax = xy.y;
 		}
+		xmin -= dijkstraStep; //Why not? A bit of leeway for +/- errors is hard to hurt.
+		ymin -= dijkstraStep;
+		xmax += dijkstraStep;
+		ymax += dijkstraStep;
 		xmin = Math.max(0, xmin);
 		ymin = Math.max(0, ymin);
 		xmax = Math.min(width-1, xmax);
@@ -1051,7 +1056,7 @@ public class MLPaintPanel extends JComponent
 		}
 
 		int diagonalSize = 9;
-		int bigDiagSize = 150;
+		int bigDiagSize = 120;
 
 		//Make negatives black diagonals
 		int sRad = 0;

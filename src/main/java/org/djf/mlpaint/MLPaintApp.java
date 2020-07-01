@@ -42,7 +42,7 @@ public class MLPaintApp extends SwingApp {
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
-		setTitle("ML Paint, version 2020.06.27");// update version number periodically   //Superclass somewhere above swingApp
+		setTitle("ML Paint, version 2020.07.01");// update version number periodically   //Superclass somewhere above swingApp
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
 		makeContent();												// MLPaintApp method
 		makeBehavior();												// MLPaintApp method
@@ -122,14 +122,14 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
-				newMenuItem("Label suggestion as positive| ENTER",
+				newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
-				newMenuItem("Label suggestion as negative -| SPACE",
+				newMenuItem("Accept suggestion as negative -| SPACE",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
-				newMenuItem("Label suggestion as unlabeled|control 0",
+				newMenuItem("Accept suggestion as unlabeled|control 0",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
 				null,
-				newMenuItem("Undo label|control Z", (name, ev) -> mlp.undo()),
+				newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo()),
 				null,
 				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
 				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
