@@ -62,7 +62,6 @@ public class MLPaintPanel extends JComponent
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
-	public BufferedImage displayImage;
 	/** width and height of image, extraLayers, labels, freshPaint, etc.  NOT the size of this Swing component on the screen, which may be smaller typically. */
 	int width, height;
 	int JPanelWidth, JPanelHeight;
@@ -148,10 +147,13 @@ public class MLPaintPanel extends JComponent
 //		}
 		labels = labels2;
 		if (labels == null) {
-			labels = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
-			SwingUtil.fillImage(labels, UNLABELED);
+			//labels = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+			labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
 			System.out.println("We created a blank labels object.");
+			//TODO: make this a toggle
+			//TODO: scrub any isolated Color.white pixels, make sure it's connected to a no_data component.
 		}
+		SwingUtil.fillCodeByCornerColor(image, labels, NO_DATA);
 		visLabels = getDisplayLabels(labels);
 
 		extraLayers = extraLayers2;
@@ -208,6 +210,8 @@ public class MLPaintPanel extends JComponent
 		mousePrev = e;
 		if (e.isControlDown()) {
 			// start dragging to pan the image
+		} else if (e.isAltDown()) {
+			eraseFreshPaint(e);
 		} else {
 			// add fresh paint
 			brushFreshPaint(e, e.isShiftDown());
@@ -226,9 +230,11 @@ public class MLPaintPanel extends JComponent
 			double dy = e.getPoint().getY() - mousePrev.getPoint().getY();
 			view.preConcatenate(AffineTransform.getTranslateInstance(dx, dy));
 
+		} else if (e.isAltDown()) {
+				eraseFreshPaint(e);
 		} else {// default
-			// put paint down
-			brushFreshPaint(e, e.isShiftDown());
+				// put paint down
+				brushFreshPaint(e, e.isShiftDown());
 		}
 		mousePrev = e;
 		e.consume();
@@ -239,7 +245,7 @@ public class MLPaintPanel extends JComponent
 	public void mouseReleased(MouseEvent e) {
 		System.out.printf("MouseRelease %s\n", e.toString());
 		// if it was painting, then extract the training set
-		if (!e.isControlDown() && !e.isAltDown()) {
+		if (!e.isControlDown() ) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
 			//classifierOutput = runClassifier();
@@ -330,9 +336,9 @@ public class MLPaintPanel extends JComponent
 		} else if (e.isShiftDown()) {// shift adjusts brush radius
 			multiplyBrushRadius(scale);
 
-		} else if (e.isAltDown()) {// adjusts nose size or adjusts fill agressiveness
-			
-			
+		} else if (e.isAltDown()) {// adjusts nose size or adjusts fill agressiveness, who knows
+			// Alt for dragging currently does erase.
+
 		} else {// default: 
 			
 		}
@@ -352,9 +358,15 @@ public class MLPaintPanel extends JComponent
 		return 5 * (ch - '0' + 1);
 	}
 
+	private void eraseFreshPaint(MouseEvent e) {
+		brushFreshPaintIndex(e, FRESH_UNLABELED);
+	}
 	private void brushFreshPaint(MouseEvent e, boolean isNegative) {
-		long t = System.currentTimeMillis();
 		int index = isNegative ? FRESH_NEG : FRESH_POS;
+		brushFreshPaintIndex(e, index);
+	}
+	private void brushFreshPaintIndex(MouseEvent e, int index) {
+		long t = System.currentTimeMillis();
 		Point2D mousePoint = new Point2D.Double((double) e.getX(), (double) e.getY());
 		Ellipse2D brush = new Ellipse2D.Double(
 				e.getX() - brushRadius, 
@@ -366,7 +378,7 @@ public class MLPaintPanel extends JComponent
 		g.setColor(color);
 		try {
 			AffineTransform inverse = view.createInverse();
-			if (!isNegative) {
+			if (index == FRESH_POS) {
 				dijkstraPossibleSeeds.add(inverse.transform(mousePoint, null));
 			}
 			g.transform(inverse);// without this, we're painting WRT screen space, even though the image is zoomed/panned
@@ -376,19 +388,20 @@ public class MLPaintPanel extends JComponent
 
 			Area brushArea = new Area(brush);
 			brushArea = brushArea.createTransformedArea(inverse);
-			if (isNegative) {
+			if (index == FRESH_NEG) {
 				antiPaintArea.add(brushArea);
 				freshPaintArea.subtract(brushArea);
-			} else {
+			} else if (index == FRESH_POS) {
 				freshPaintArea.add(brushArea);
 				antiPaintArea.subtract(brushArea);
+			} else {
+				freshPaintArea.subtract(brushArea);
+				antiPaintArea.subtract(brushArea);
 			}
-			t = reportTime(t, "Added to the area of fresh or anti paint.");
+			t = reportTime(t, "Added to the area of fresh or anti paint, or erased.");
 		} catch (NoninvertibleTransformException e1) {// won't happen
 			e1.printStackTrace();
 		}
-
-
 	}
 
 	/**Paints the image, freshpaint, and possibly classifier output, to the screen.
@@ -434,20 +447,20 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
 
+
+		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+		//g2.drawImage(labels, 0, 0, null);
+		g2.drawImage(visLabels, 0, 0, null);
+		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
+
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
 		g2.drawRect(0, 0, width, height);
 		t = reportTime(t, "Pretty frame drawn.");
 
-		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
-		//g2.drawImage(labels, 0, 0, null);
-
-		g2.drawImage(visLabels, 0, 0, null);
-		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
-
 		//Draw the fresh paint.
 		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
-		boolean asImage = false;
+		boolean asImage = true;
 		if (asImage) {
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
 			g2.fill(freshPaintArea);
@@ -753,6 +766,11 @@ public class MLPaintPanel extends JComponent
 		listQueues.add(queue);
 		t = reportTime(t, "Initialized the queue.");
 
+		if (queue.size() == 0) {
+			initializeFreshPaint();
+			return;
+		}
+
 		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
 		t = reportTime(t, "");
 		for (int i=0; i<queueBoundsIdx +1; i++) {
@@ -812,6 +830,7 @@ public class MLPaintPanel extends JComponent
 			for (int j=y; j < greatery; j++) {
 				distances[i][j] = (float) proposedCost;
 				//TODO: This currently allows for (dijkstraGridLength -1) pixels of encroachment on previous labels.
+				// also on no_data
 			}
 		}
 	}
@@ -870,32 +889,11 @@ public class MLPaintPanel extends JComponent
 		return out;
 	}
 
-	/** Return a bunch of seed MyPoints with 0 initialization distance
+	/** Return a bunch of seed MyPoints with close to zero initialization distance
 	 * 	Maydo: Do not allow a suggestion outside of view
-	 * 	Maydo: Get connected components and for each get a lowest classifier score
 	 */
 	private List<MyPoint> getDijkstraSeedPoints() {
 		System.out.printf("Possible seedPoints for Dijkstra is length %,d.",dijkstraPossibleSeeds.size());
-//		WritableRaster rawData = freshPaint.getRaster();
-//		WritableRaster labels0 = labels.getRaster();
-//		MyPoint smallest = new MyPoint(Double.POSITIVE_INFINITY, 0,0);
-//		for (Point2D p2 : dijkstraPossibleSeeds) {
-//			int x = (int) p2.getX();
-//			int y = (int) p2.getY();
-//			if (isXYOutsideImage(x,y)) continue;
-//
-//			int index = rawData.getSample(x, y, 0);// 0 or 1
-//			int driedLabel = labels0.getSample(x,y,0);
-//			if (index == FRESH_POS && driedLabel == UNLABELED) {
-//				double score0 = getClassifierProbNeg(x,y);
-//				if (score0 < smallest.fuelCost) {
-//					smallest = new MyPoint(score0,x,y);
-//				}
-//			}
-//		}
-//		List<MyPoint> rr = new ArrayList<MyPoint>();
-//		rr.add(smallest);
-//		return rr;
 
 		List<MyPoint> rr = new ArrayList<MyPoint>();
 		WritableRaster labels0 = labels.getRaster();
@@ -907,6 +905,8 @@ public class MLPaintPanel extends JComponent
 			y -= y%dijkstraStep;
 			if (isXYOutsideImage(x, y)) continue;
 			if (labels0.getSample(x,y,0) != UNLABELED) continue;
+			System.out.print(labels0.getSample(x,y,0));
+			System.out.println("That was a seed sample label.");
 			if (fp.getSample(x,y,0) != FRESH_POS) continue;
 
 			rr.add(new MyPoint(1.0, x,y));
@@ -1021,14 +1021,14 @@ public class MLPaintPanel extends JComponent
 		Color memColor = g2.getColor();
 		int ptSize = 1;
 
-		int diagonalSize = 10;
+		int diagonalSize = 12;
 		int bigDiagSize = 200;
 
 		//Make negatives black diagonals
-		int sRad = 1;
+		int sRad = 0;
 		int sRadPlus = 2;
-		int bRad = 6;
-		int bRadPlus = 8;
+		int bRad = 5;
+		int bRadPlus = 9;
 
 		boolean smallVert = i%diagonalSize <=sRad || i%diagonalSize >= diagonalSize-sRad;
 
@@ -1055,7 +1055,7 @@ public class MLPaintPanel extends JComponent
 			if (bigDiagonalPlus && !bigDiagonal) {
 				g2.setColor(LABEL_HIGHLIGHTS[NEGATIVE]);
 				g2.fillRect(i,j,ptSize,ptSize);
-			} else if (smallDiagonal || bigDiagonal) {
+			} else if (smallVert || bigDiagonal) {
 				g2.setColor(LABEL_COLORS[NEGATIVE]);
 				g2.fillRect(i, j, ptSize, ptSize);
 			}
@@ -1064,7 +1064,7 @@ public class MLPaintPanel extends JComponent
 			if (bigDiamondPlus && !bigDiamond) {
 				g2.setColor(LABEL_HIGHLIGHTS[POSITIVE]);
 				g2.fillRect(i,j,ptSize,ptSize);
-			} else if ( smallDiamond || bigDiamond) {
+			} else if ( smallVert || bigDiamond) {
 				g2.setColor(LABEL_COLORS[POSITIVE]);
 				g2.fillRect(i, j, ptSize, ptSize);
 			}

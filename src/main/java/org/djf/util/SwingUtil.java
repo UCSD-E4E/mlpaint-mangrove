@@ -1,10 +1,9 @@
 package org.djf.util;
 
 import java.awt.*;
+import java.awt.color.ColorSpace;
 import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
-import java.awt.image.WritableRaster;
+import java.awt.image.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -66,6 +65,49 @@ public class SwingUtil {
 				rawData.setSample(x, y, 0, intVal);
 			}
 		}
+	}
+
+	public static void fillCodeByCornerColor(BufferedImage image, BufferedImage labels, int labelsCode) {
+		WritableRaster img = image.getRaster();
+		ColorModel imgCm = image.getColorModel();
+		int[][] fourCorners = {	{0,0},
+								{0,img.getHeight()-1},
+								{img.getWidth()-1, img.getHeight()-1},
+								{img.getWidth()-1,0} };
+		int imgMainCode = img.getSample(fourCorners[0][0], fourCorners[0][1], 0);
+		Color imageColor = new Color(imgCm.getRGB(imgMainCode));
+		System.out.print(imageColor);
+		for (int[] pair : fourCorners) {
+			int imgCode = img.getSample(pair[0], pair[1], 0);
+			Color pxlColor = new Color(imgCm.getRGB(imgCode));
+			System.out.print(pxlColor);
+			if (!pxlColor.equals(imageColor)) {
+				System.out.println("The colors at the four corners were not consistent. \n" +
+						"So we did not use it for a no_data code in labels.");
+				return;
+			}
+		}
+		System.out.println("We have a no_data color supposed: ");
+		System.out.print(imageColor);
+		System.out.println("We got the same color in the four corners of the image. \n" +
+				"So fill it in with NO_DATA for the labels image.");
+		fillCodeByColor(image, imageColor, labels, labelsCode);
+	}
+
+	public static void fillCodeByColor(BufferedImage image, Color imageColor, BufferedImage labels, int labelsCode) {
+		WritableRaster img = image.getRaster();
+		WritableRaster lbl = labels.getRaster();
+		ColorModel imgCm = image.getColorModel();
+		for (int i=0; i < img.getWidth(); i++ ) {
+			for (int j=0; j < img.getHeight(); j++) {
+				int imgCode = img.getSample(i,j,0);
+				Color pxlColor = new Color(imgCm.getRGB(imgCode));
+				if (pxlColor.equals(imageColor)) {
+					lbl.setSample(i, j, 0, labelsCode);
+				}
+			}
+		}
+
 	}
 
 	public static void addImage(BufferedImage buff1, BufferedImage buff2) {
@@ -171,6 +213,7 @@ public class SwingUtil {
 		return resampledImage;
 	}
 
+
 	public static BufferedImage upsampleImage0Channel(BufferedImage smallImg, Dimension goalDimensions, int upSampling) {
 		int pixelDifferenceWidth  = smallImg.getWidth()*upSampling  - goalDimensions.width;
 		int pixelDifferenceHeight = smallImg.getHeight()*upSampling - goalDimensions.height;
@@ -185,9 +228,10 @@ public class SwingUtil {
 		//All those preconditions should work, since our downsampling did this:
 		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
 
-		BufferedImage bigImg = new BufferedImage(goalDimensions.width, goalDimensions.height, smallImg.getType());
-		WritableRaster bigRawData = bigImg.getRaster();
 		WritableRaster smallRawData = smallImg.getRaster(); //GROK: Versus writableRaster, what about readableRaster?
+		ColorModel smallCm = smallImg.getColorModel();
+
+		WritableRaster bigRawData = smallCm.createCompatibleWritableRaster(goalDimensions.width, goalDimensions.height);
 
 		for (int x=0; x < goalDimensions.width; x++) {
 			for (int y = 0; y < goalDimensions.height; y++) {
@@ -195,8 +239,24 @@ public class SwingUtil {
 				bigRawData.setSample(x, y, 0, pixelVal);
 			}
 		}
+
+		BufferedImage bigImg = new BufferedImage(smallCm, bigRawData, false, null);
 		return bigImg;
 	}
 
+	public static void save2Bit(BufferedImage in, File outFile) throws IOException {
+		//https://stackoverflow.com/a/12672467/13773745
+		int w = in.getWidth(), h = in.getHeight();
+		byte[] v = new byte[1 << 2];
+		for (int i = 0; i < v.length; ++i)
+			v[i] = (byte)(i*17);
+		ColorModel cm = new IndexColorModel(2, v.length, v, v, v);
+		WritableRaster wr = cm.createCompatibleWritableRaster(w, h);
+		BufferedImage out = new BufferedImage(cm, wr, false, null);
+		Graphics2D g = out.createGraphics();
+		g.drawImage(in, 0, 0, null);
+		g.dispose();
+		ImageIO.write(out, "png", outFile );
+	}
 
 }

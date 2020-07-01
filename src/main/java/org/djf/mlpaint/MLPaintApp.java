@@ -220,8 +220,8 @@ public class MLPaintApp extends SwingApp {
 		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
 		//  It seems that  4-bit image rather than 8-bit allows for double the image size, 2^32, or 65,500^2.
 		BufferedImage labelsToScale = SwingUtil.upsampleImage0Channel(mlp.labels, xy.bigDim, xy.samplingEdge);
-		ImageIO.write(labelsToScale, formatName, outfile.toFile());
-		status("Saved %d x %d labels to %s", labelsToScale.getWidth(), labelsToScale.getHeight(), outfile);
+		boolean a = ImageIO.write(labelsToScale, formatName, outfile.toFile());
+		status("Saved %d x %d labels to %s, with message %s", labelsToScale.getWidth(), labelsToScale.getHeight(), outfile, a);
 		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
 	}
 
