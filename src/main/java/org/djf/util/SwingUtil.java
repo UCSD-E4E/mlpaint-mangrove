@@ -30,7 +30,7 @@ public class SwingUtil {
 	public static final Color ALPHAGREEN = new Color(0,1,0,.2f);
 	public static final Color ALPHABLUE  = new Color(0,0,1,.2f);
 	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
-	public static final Color ALPHAGRAY = new Color(0, 0, 0, .3f);
+	public static final Color ALPHAGRAY = new Color(0, 0, 0, .5f);
 	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);
 	public static final Color SKYBLUE = new Color(41,204, 255);
 	public static final Color SKYRED = new Color(255, 119, 54);
@@ -257,6 +257,13 @@ public class SwingUtil {
 		g.drawImage(in, 0, 0, null);
 		g.dispose();
 		ImageIO.write(out, "png", outFile );
+	}
+
+	public static BufferedImage deepCopy(BufferedImage bi) {
+		ColorModel cm = bi.getColorModel();
+		boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
+		WritableRaster raster = bi.copyData(null);
+		return new BufferedImage(cm, raster, isAlphaPremultiplied, null).getSubimage(0, 0, bi.getWidth(), bi.getHeight());
 	}
 
 }

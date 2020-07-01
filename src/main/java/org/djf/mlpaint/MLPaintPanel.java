@@ -13,6 +13,7 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
+import java.nio.Buffer;
 import java.util.*;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -46,8 +47,9 @@ public class MLPaintPanel extends JComponent
 	public static final int POSITIVE = 3;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
 	public static final int NEGATIVE = 2;//2;// 0;
 	public static final int NO_DATA = 1;//1;//254;
-	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.lightGray};
-	public static final Color[] LABEL_HIGHLIGHTS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.lightGray, Color.BLACK};
+	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY};
+	public static final Color[] LABEL_ETCH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.lightGray};//I think it's important that
+	public static final Color[] LABEL_HIGHLIGHTS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.lightGray, Color.BLACK};// etch and highlight be same colors
 	// possibly up to 16 different labels, as needed, with more colors
 
 	// *freshPaint* pixel index codes (0 to 3 maximum)
@@ -58,7 +60,8 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0001;
-	private static final double QUEUE_GROWTH = 0.2/9.0;
+	private static final int DEFAULT_DIJKSTRA_GROWTH = 26;
+	private static final int interiorSteps = 10;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -74,7 +77,9 @@ public class MLPaintPanel extends JComponent
 	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
 	private BufferedImage visLabels;
-	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(11);
+	private static final int UNDO_MEM = 10;
+	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
+
 
 	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
 	 * Colors for display are transparent & transparent-green, currently.
@@ -86,7 +91,7 @@ public class MLPaintPanel extends JComponent
 	private List<Point2D> dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
 
 	/** pixel size of the brush.  */
-	public double brushRadius = radiusFromChDigit('1');
+	public double brushRadius = radiusFromChDigit('5');
 
 	private SoftClassifier<double[]> classifier;
 	private final int maxPositives = 4000;
@@ -155,7 +160,7 @@ public class MLPaintPanel extends JComponent
 			//TODO: scrub any isolated Color.white pixels, make sure it's connected to a no_data component.
 		}
 		SwingUtil.fillCodeByCornerColor(image, labels, NO_DATA);
-		undoLabels.add(labels);
+		undoLabels.clear();
 		visLabels = getDisplayLabels(labels);
 
 		extraLayers = extraLayers2;
@@ -177,6 +182,7 @@ public class MLPaintPanel extends JComponent
 		double scale =  925.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
 		view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
 		showClassifier.set(false);
+		brushRadius = radiusFromChDigit('5');
 		repaint();
 	}
 
@@ -185,7 +191,7 @@ public class MLPaintPanel extends JComponent
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		t = reportTime(t, "We have made a new freshpaint image.");
 		listQueues = null;
-		queueBoundsIdx = 19;
+		queueBoundsIdx = DEFAULT_DIJKSTRA_GROWTH;
 		freshPaintArea = new Area();
 		antiPaintArea = new Area();
 		dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
@@ -268,22 +274,16 @@ public class MLPaintPanel extends JComponent
 		// System.out.printf("MouseEntered %s\n", e.toString());
 		setCursorToMarkerAtRightSize();
 	}
-
 	@Override
 	public void mouseExited(MouseEvent e) {
 		// System.out.printf("MouseExited %s\n", e.toString());
 		setMarkerToCursor();
 	}
-
 	public void setCursorToMarkerAtRightSize() {
-		setCursor(
-				new Cursor(Cursor.CROSSHAIR_CURSOR));
-
+		setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
 	}
-
 	public void setMarkerToCursor() {
-		setCursor(
-				new Cursor(Cursor.DEFAULT_CURSOR));
+		setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
 	}
 
 
@@ -305,15 +305,15 @@ public class MLPaintPanel extends JComponent
 	}
 
 	public void actOnChar(char ch) {
+		System.out.println("actOnChar was called.");
 		if (Character.isDigit(ch)) {
 			brushRadius = radiusFromChDigit(ch);// somehow translate it
 			// show the user too
 			System.out.printf("paintbrush radius: %s\n", brushRadius);
-		} else if (ch == ' '){ //MAYDO: Test if in keys, then send the appropriate digit from a dict.
+		//MAYDO: Test if in keys, then send the appropriate digit from a dict.
 			// That way we can add labels interactively in the GUI by changing the keys variable.
-			writeSuggestionToLabels(NEGATIVE);
-		} else if (ch == 'm'){
-			writeSuggestionToLabels(POSITIVE);
+		} else {
+			System.out.printf( "actOnChar does not handle character %s",ch);
 		}
 	}
 
@@ -351,13 +351,14 @@ public class MLPaintPanel extends JComponent
 
 	public void multiplyBrushRadius(double scale) {
 		brushRadius *= scale;
-		brushRadius = Math.max(0.5, brushRadius);// never < 1 pixel
-		brushRadius = Math.min(brushRadius, radiusFromChDigit('9'));
+		brushRadius = Math.max(((double) dijkstraStep)/2, brushRadius);// never < 1 pixel
+		brushRadius = Math.min(brushRadius, 3*radiusFromChDigit('9'));
 		System.out.printf("brushRadius := %s\n", brushRadius);
 	}
 
-	public int radiusFromChDigit(char ch) {
-		return 5 * (ch - '0' + 1);
+	public double radiusFromChDigit(char ch) {
+		int rr = 2 * (ch - '0' + 1);
+		return Math.max(rr, dijkstraStep/2.0);
 	}
 
 	private void eraseFreshPaint(MouseEvent e) {
@@ -769,13 +770,18 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Initialized the queue.");
 
 		if (queue.size() == 0) {
-			initializeFreshPaint();
+			//initializeFreshPaint(); This was getting rid of all-negative labeling if I start that way.
 			return;
 		}
 
-		int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
+		double repsIncrementAbs = (double) (freshPaintNumPositives / (double) interiorSteps);
+		int repsIncrement = (int) (repsIncrementAbs / (dijkstraStep*dijkstraStep) );
 		t = reportTime(t, "");
-		for (int i=0; i<queueBoundsIdx +1; i++) {
+		for (int i=0; i < interiorSteps; i++) {
+			growDijkstra(repsIncrement);
+		}
+		for (int i=interiorSteps; i<queueBoundsIdx +1; i++) {
+			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,i-interiorSteps)*0.02);
 			growDijkstra(repsIncrement);
 		}
 		t = reportTime(t, "Initialized Dijkstra with 20 growDijkstras.");
@@ -948,7 +954,7 @@ public class MLPaintPanel extends JComponent
 		queueBoundsIdx += 1;
 		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
 		if (listQueues.size() == queueBoundsIdx) {
-			int repsIncrement = (int) (freshPaintNumPositives*QUEUE_GROWTH);
+			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1-interiorSteps)*0.02);
 			growDijkstra(repsIncrement);
 		}
 		repaint();
@@ -961,24 +967,27 @@ public class MLPaintPanel extends JComponent
 	}
 
 
-	private void writeSuggestionToLabels(int labelIndex) {
+	public void writeSuggestionToLabels(int labelIndex) { //Maydo: add edges
 		long t = System.currentTimeMillis();
 		System.out.println("writeSuggestionToLabels called \n");
 		if (listQueues == null || distances == null || labels == null || queueBoundsIdx < 0) {
 			return;
 		}
+		copyToUndoLabels(labels);
 		double thresholdDistance = getThresholdDistance();
+		int[] bounds = getCurrentQueueBounds(); //xmin, ymin, xmax, ymax
 		WritableRaster labels0 = labels.getRaster();
-		for (int x=0; x<width; x++){
-			for (int y=0; y<height; y++){
+		WritableRaster displayRast = visLabels.getRaster();
+		for (int x=bounds[0]; x<bounds[2]; x++){
+			for (int y=bounds[1]; y<bounds[3]; y++){
 				float distance = distances[x][y];
 				if (distance < thresholdDistance && distance > 0) {
 					labels0.setSample( x, y, 0, labelIndex);
+					visLabelPointPosNegData( displayRast, x, y, labelIndex);
 				}
 			}
 		}
 		initializeFreshPaint();
-		visLabels = getDisplayLabels(labels);
 		repaint();
 		t = reportTime(t, "We wrote the suggestion to labels via distances[][] < threshold & >0.");
 	}
@@ -989,14 +998,35 @@ public class MLPaintPanel extends JComponent
 		return lowestPoint.fuelCost;
 	}
 
+	private int[] getCurrentQueueBounds() {
+		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueBoundsIdx);
+		int xmin = width-1;
+		int ymin = height-1;
+		int xmax = 0;
+		int ymax = 0;
+		for (Iterator<MyPoint> it = thisQueue.iterator(); it.hasNext(); ) {
+			MyPoint xy = it.next();
+			if (xy.x < xmin) xmin = xy.x;
+			if (xy.y < ymin) ymin = xy.y;
+			if (xy.x > xmax) xmax = xy.x;
+			if (xy.y > ymax) ymax = xy.y;
+		}
+		xmin = Math.max(0, xmin);
+		ymin = Math.max(0, ymin);
+		xmax = Math.min(width-1, xmax);
+		ymax = Math.min(height-1, ymax);
+		int[] bounds = {xmin, ymin, xmax, ymax};
+		return bounds;
+	}
+
 	/** Return a new image with hatchings on it from the labels   */
 	private BufferedImage getDisplayLabels(BufferedImage myLabels) {
 		long t = System.currentTimeMillis();
 
 		WritableRaster l = myLabels.getRaster();
 
-		BufferedImage displayLabels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
-		Graphics2D g2 = displayLabels.createGraphics();
+		BufferedImage displayLabels = SwingUtil.newBinaryImage(width, height, LABEL_ETCH_COLORS);
+		WritableRaster displayRast = displayLabels.getRaster();
 
 		//Fill it all as unlabeled, unnecessary since zero initialized
 		//g2.setColor( new Color(cm.getRGB(UNLABELED)));
@@ -1005,26 +1035,23 @@ public class MLPaintPanel extends JComponent
 		for (int i=0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
 				int code = l.getSample(i,j,0);
-				visLabelPointPosNegData(g2, i, j, code);
+				visLabelPointPosNegData(displayRast, i, j, code);
 			}
 		}
 
 		t = reportTime(t, "We initialized the visLabels version of labels.");
-		g2.dispose();
 		return displayLabels;
 	}
 
-	private void visLabelPointPosNegData(Graphics2D g2, int i, int j, int PosNegUnCode) {
+	private void visLabelPointPosNegData(WritableRaster displayRast, int i, int j, int PosNegUnCode) {
 		if (PosNegUnCode != POSITIVE && PosNegUnCode != NEGATIVE && PosNegUnCode != NO_DATA) {
 			//System.out.println("This is probably an error. \n" +
 			//		"You may have called visLabelPointPosNegData for unlabeled.");
 			return;
 		}
-		Color memColor = g2.getColor();
-		int ptSize = 1;
 
-		int diagonalSize = 12;
-		int bigDiagSize = 200;
+		int diagonalSize = 9;
+		int bigDiagSize = 150;
 
 		//Make negatives black diagonals
 		int sRad = 0;
@@ -1055,31 +1082,40 @@ public class MLPaintPanel extends JComponent
 
 		if ( PosNegUnCode == NEGATIVE ) {
 			if (bigDiagonalPlus && !bigDiagonal) {
-				g2.setColor(LABEL_HIGHLIGHTS[NEGATIVE]);
-				g2.fillRect(i,j,ptSize,ptSize);
+				displayRast.setSample(i,j,0, POSITIVE); //POSITIVE highlight
 			} else if (smallVert || bigDiagonal) {
-				g2.setColor(LABEL_COLORS[NEGATIVE]);
-				g2.fillRect(i, j, ptSize, ptSize);
+				displayRast.setSample(i,j,0, NEGATIVE);
 			}
 		//Make positives gray hatches
 		} else if ( PosNegUnCode == POSITIVE ) {
 			if (bigDiamondPlus && !bigDiamond) {
-				g2.setColor(LABEL_HIGHLIGHTS[POSITIVE]);
-				g2.fillRect(i,j,ptSize,ptSize);
+				displayRast.setSample(i,j,0, NEGATIVE); //NEGATIVE highlight
 			} else if ( smallVert || bigDiamond) {
-				g2.setColor(LABEL_COLORS[POSITIVE]);
-				g2.fillRect(i, j, ptSize, ptSize);
+				displayRast.setSample(i,j,0, POSITIVE);
 			}
 			//Fill No Data
 		} else if (PosNegUnCode == NO_DATA) {
-			g2.setColor(LABEL_COLORS[NO_DATA]);
-			g2.fillRect(i, j, ptSize, ptSize);
+			displayRast.setSample(i,j,0, NO_DATA);
 		}
-
-		g2.setColor(memColor);
 	}
 
-	private void addToUndoLabels(BufferedImage in) {
-		//
+	private void copyToUndoLabels(BufferedImage in) {
+		if (undoLabels.size() > UNDO_MEM) {
+			undoLabels.remove(0);
+		}
+		System.out.println("We are adding to undo memory.");
+		undoLabels.add(SwingUtil.deepCopy(in));
+	}
+
+	public void undo() {
+		if (undoLabels.size() < 1 ) {
+			System.out.println("There is not more history saved to undo.");
+			return;
+		}
+		labels = undoLabels.get(undoLabels.size() -1);
+		undoLabels.remove(undoLabels.size()-1);
+		initializeFreshPaint();
+		visLabels = getDisplayLabels(labels);
+		repaint();
 	}
 }

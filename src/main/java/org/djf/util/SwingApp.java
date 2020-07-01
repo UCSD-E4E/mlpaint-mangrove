@@ -10,14 +10,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.prefs.Preferences;
 
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 import com.google.common.collect.Lists;
 
@@ -123,6 +116,8 @@ public class SwingApp extends JFrame {
 		for (JMenuItem item: items) {
 			if (item != null) {
 				rr.add(item);
+			} else {
+				rr.add(new JSeparator());
 			}
 		}
 		return rr;
@@ -132,6 +127,7 @@ public class SwingApp extends JFrame {
 	public static JMenuItem newMenuItem(String command, ActionListener2 action) {
 		return new JMenuItem(newAction(command, action));
 	}
+
 	
 	/** new named menu item, with the provided action function
 	 * If command string ends with "|alt D" establish keyboard shortcut.

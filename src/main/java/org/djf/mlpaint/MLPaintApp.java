@@ -122,15 +122,22 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
-				newMenuItem("Label proposed as positive +  m", (name,ev) -> mlp.actOnChar('m')), //MAYDO: UI key choice
-				newMenuItem("Label suggestion as negative -  SPACE", (name,ev) -> mlp.actOnChar(' ')),
-				newMenuItem("Label suggestion as unlabeled|control 0", this::label),
+				newMenuItem("Label suggestion as positive| ENTER",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
+				newMenuItem("Label suggestion as negative -| SPACE",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
+				newMenuItem("Label suggestion as unlabeled|control 0",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
+				null,
+				newMenuItem("Undo label|control Z", (name, ev) -> mlp.undo()),
+				null,
 				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
 				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
 				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
+				null,
 				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),
 				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
-				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.radiusFromChDigit('1')),
+				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5')),
 				null);
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
@@ -232,8 +239,7 @@ public class MLPaintApp extends SwingApp {
 		status("TODO %s\n", command);
 	}
 
-	private void label(String command, ActionEvent ev) {
-		//TODO 
+	private void  label(String command, ActionEvent ev) {
 		// Using mlp.proposed somehow
 		status("TODO %s\n", command);
 	}
