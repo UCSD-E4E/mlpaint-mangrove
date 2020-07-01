@@ -74,6 +74,7 @@ public class MLPaintPanel extends JComponent
 	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
 	private BufferedImage visLabels;
+	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(11);
 
 	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
 	 * Colors for display are transparent & transparent-green, currently.
@@ -154,6 +155,7 @@ public class MLPaintPanel extends JComponent
 			//TODO: scrub any isolated Color.white pixels, make sure it's connected to a no_data component.
 		}
 		SwingUtil.fillCodeByCornerColor(image, labels, NO_DATA);
+		undoLabels.add(labels);
 		visLabels = getDisplayLabels(labels);
 
 		extraLayers = extraLayers2;
@@ -1077,5 +1079,7 @@ public class MLPaintPanel extends JComponent
 		g2.setColor(memColor);
 	}
 
-
+	private void addToUndoLabels(BufferedImage in) {
+		//
+	}
 }
