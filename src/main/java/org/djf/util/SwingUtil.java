@@ -14,6 +14,7 @@ import javax.imageio.ImageReader;
 import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.plugins.tiff.TIFFDirectory;
 import javax.imageio.stream.ImageInputStream;
 
 import com.google.common.base.Preconditions;
@@ -184,12 +185,12 @@ public class SwingUtil {
 	public static BufferedImage	subsampleImageFile(File file, ImageResamplingDims xy, IIOMetadata metadata) throws IOException {//BufferedImage
 		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
 		IIOReadProgressListener progressListener = null;
-		return subsampleImage(inputStream, xy, progressListener);
+		return subsampleImage(inputStream, xy, progressListener, metadata);
 	}
 	
 	// https://stackoverflow.com/questions/3294388/make-a-bufferedimage-use-less-ram, altered mildly
 	public static BufferedImage subsampleImage(ImageInputStream inputStream, ImageResamplingDims xy,
-			IIOReadProgressListener progressListener) throws IOException {
+			IIOReadProgressListener progressListener, IIOMetadata metadata) throws IOException {
 
 		BufferedImage resampledImage = null;
 
@@ -209,7 +210,9 @@ public class SwingUtil {
 
 		reader.addIIOReadProgressListener(progressListener);
 
-		metadata = reader.getStreamMetadata();
+		IIOMetadata m = reader.getImageMetadata(0);
+		TIFFDirectory m1 = TIFFDirectory.createFromMetadata(m);
+		System.out.printf("We got the image metadata: %s", m1);
 
 		resampledImage = reader.read(0, imageReaderParams);
 		reader.removeAllIIOReadProgressListeners();
