@@ -13,6 +13,7 @@ import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.ImageTypeSpecifier;
 import javax.imageio.event.IIOReadProgressListener;
+import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.stream.ImageInputStream;
 
 import com.google.common.base.Preconditions;
@@ -180,7 +181,7 @@ public class SwingUtil {
 	}
 
 
-	public static BufferedImage	subsampleImageFile(File file, ImageResamplingDims xy) throws IOException {//BufferedImage
+	public static BufferedImage	subsampleImageFile(File file, ImageResamplingDims xy, IIOMetadata metadata) throws IOException {//BufferedImage
 		ImageInputStream inputStream = ImageIO.createImageInputStream(file);
 		IIOReadProgressListener progressListener = null;
 		return subsampleImage(inputStream, xy, progressListener);
@@ -207,6 +208,9 @@ public class SwingUtil {
 		imageReaderParams.setSourceSubsampling(xy.samplingEdge, xy.samplingEdge, 0, 0);
 
 		reader.addIIOReadProgressListener(progressListener);
+
+		metadata = reader.getStreamMetadata();
+
 		resampledImage = reader.read(0, imageReaderParams);
 		reader.removeAllIIOReadProgressListeners();
 

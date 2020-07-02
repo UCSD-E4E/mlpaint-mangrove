@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
+import javax.imageio.metadata.IIOMetadata;
 import javax.swing.*;
 
 import org.djf.util.SwingApp;
@@ -34,11 +35,14 @@ public class MLPaintApp extends SwingApp {
 
 	private Path currentImageFile;
 
+	private IIOMetadata currentImageMetadata = null;
+	private IIOMetadata currentLabelsMetadata = null;
+
 	/** magic label paint panel that holds the secret sauce */
 	private MLPaintPanel mlp = null;
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
-
+	private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Lock accepted labels", false);
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
@@ -97,10 +101,18 @@ public class MLPaintApp extends SwingApp {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
 		showClassifier.addActionListener(event -> {
 			mlp.showClassifier.set(showClassifier.isSelected());
-			if (mlp.classifierOutput == null) {  //GROK: I feel terrible about this programming. It's 1 am.
+			if (mlp.classifierOutput == null) {  //TODO: I feel terrible about this programming. It's 1 am.
 				mlp.classifierOutput = mlp.runClassifier();
 			}
 			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifier.get());
+		});
+
+		noRelabel.setAccelerator(KeyStroke.getKeyStroke("control L"));
+		noRelabel.addActionListener(event -> {
+			mlp.noRelabel = (noRelabel.isSelected());
+			mlp.initDijkstra();
+			mlp.repaint();
+			status("Locking down labels so they cannot be changed: %s", noRelabel.isSelected());
 		});
 
 	}
@@ -122,6 +134,8 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
+
+				noRelabel, null,
 				newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
 				newMenuItem("Accept suggestion as negative -| SPACE",
@@ -156,7 +170,6 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private void openImage() throws IOException {
-
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
@@ -179,6 +192,7 @@ public class MLPaintApp extends SwingApp {
 		xy = new ImageResamplingDims(jfc.getSelectedFiles()[0], maxPixels);
 		boolean consistent = SwingUtil.isSameDimensions(xy.bigDim,jfc.getSelectedFiles());
 		if (!consistent) {
+			status("Not all the selected images had the same dimensions.");
 			return;
 		}
 		// 3. Load downsampled images for all the layers
@@ -189,15 +203,20 @@ public class MLPaintApp extends SwingApp {
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
 		for (File file: jfc.getSelectedFiles()) {
-			BufferedImage img = SwingUtil.subsampleImageFile(file, xy);
+			IIOMetadata metadata = null;
+			BufferedImage img = SwingUtil.subsampleImageFile(file, xy, metadata);
 			//BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
 			if (file.toString().contains("_RGB")) {
 				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
+				currentImageMetadata = metadata;
+				System.out.print(metadata);
 			} else if (file.toString().contains("_labels")) {
 				labels = img;
+				currentLabelsMetadata = metadata;
+				System.out.print(metadata);
 				System.out.println("We got a labels file.");
 			} else {
 				extraLayers.put(file.getName(), img);
@@ -209,6 +228,7 @@ public class MLPaintApp extends SwingApp {
 		// My original design REPLACED the mlp, but it was forever not re-painting.
 		// Instead, I'll just change its data.
 		showClassifier.setSelected(false);
+		noRelabel.setSelected(true);
 		mlp.resetData(image, labels, extraLayers);
 		mlp.revalidate();// https://docs.oracle.com/javase/8/docs/api/javax/swing/JComponent.html#revalidate--
 		status("Opened %s  %,d x %,d       %s", currentImageFile, image.getWidth(), image.getHeight(),

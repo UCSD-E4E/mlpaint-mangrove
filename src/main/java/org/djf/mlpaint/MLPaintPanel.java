@@ -77,7 +77,8 @@ public class MLPaintPanel extends JComponent
 	/** matching image labels, like this: 0=UNLABELED, 1=POSITIVE, 2=NEGATIVE, ... */
 	public BufferedImage labels;
 	private BufferedImage visLabels;
-	boolean allowRelabel = false;
+	/** clients can toggle this property and we automatically re-initDijkstra */
+	public boolean noRelabel = true;
 	private static final int UNDO_MEM = 10;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
@@ -753,7 +754,7 @@ public class MLPaintPanel extends JComponent
 		).toArray();
 	}
 
-	private void initDijkstra() {
+	void initDijkstra() {
 		long t = System.currentTimeMillis();
 		// set all of doubles[width][height] to ZERO. Should be done beforehand with the initializeFreshPaint.
 		setDistancesZero(distances);
@@ -873,7 +874,7 @@ public class MLPaintPanel extends JComponent
 			// If the coordinates are already labeled in the real image, don't even consider it.
 		WritableRaster rawdata = labels.getRaster();
 		int labelsVal = rawdata.getSample(x,y,0);
-		if (labelsVal != UNLABELED && allowRelabel == false){
+		if (labelsVal != UNLABELED && noRelabel == true){
 			return Double.POSITIVE_INFINITY;
 		}
 			// If freshPaint positive, return  MIN_DISTANCE_VALUE, probably 0.
@@ -913,8 +914,10 @@ public class MLPaintPanel extends JComponent
 			x -= x%dijkstraStep;
 			y -= y%dijkstraStep;
 			if (isXYOutsideImage(x, y)) continue;
-			if (labels0.getSample(x,y,0) != UNLABELED) continue;
-			System.out.print(labels0.getSample(x,y,0));
+			int labelSample = labels0.getSample(x, y, 0);
+			if (noRelabel == true && labelSample != UNLABELED) continue;
+			if (noRelabel == false && labelSample == NO_DATA) continue;
+			System.out.print(labelSample);
 			System.out.println("That was a seed sample label.");
 			if (fp.getSample(x,y,0) != FRESH_POS) continue;
 
