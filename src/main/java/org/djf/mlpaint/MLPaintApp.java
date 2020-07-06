@@ -34,6 +34,7 @@ public class MLPaintApp extends SwingApp {
 	private ImageResamplingDims xy;
 
 	private Path currentImageFile;
+	private Path possibleImageFileNo_RGB;
 
 	private IIOMetadata currentImageMetadata = null;
 	private IIOMetadata currentLabelsMetadata = null;
@@ -217,8 +218,8 @@ public class MLPaintApp extends SwingApp {
 			if (file.toString().endsWith("_RGB")) {
 				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
-				currentImageMetadata = metadata;
-				System.out.print(metadata);
+				//currentImageMetadata = metadata;
+				//System.out.print(metadata);
 			} else if (file.toString().endsWith("_labels")) {
 				labels = img;
 				currentLabelsMetadata = metadata;
@@ -226,9 +227,15 @@ public class MLPaintApp extends SwingApp {
 				System.out.println("We got a labels file.");
 			} else {
 				extraLayers.put(file.getName(), img);
+				possibleImageFileNo_RGB = file.toPath();
 			}
 		}
-		if (image == null) {
+		if (image == null && extraLayers.size() == 1) {
+			for (BufferedImage bi: extraLayers.values()) {
+				image = bi;
+			}
+			currentImageFile = possibleImageFileNo_RGB;
+		} else if (image == null) {
 			throw new IllegalArgumentException("Must provide the _RGB image");// appears in status bar in red
 		}
 		// My original design REPLACED the mlp, but it was forever not re-painting.
