@@ -485,7 +485,7 @@ public class MLPaintPanel extends JComponent
 			crossHatchArea(g2, freshPaintArea,FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
 			crossHatchArea(g2, antiPaintArea, FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 		}
-
+		t = reportTime(t, "cross hatched fresh paint drawn");
 		g2.dispose();
 	}
 

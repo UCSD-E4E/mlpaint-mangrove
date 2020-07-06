@@ -179,6 +179,7 @@ public class SwingUtil {
 		for (File file: files) { //GROK: hasnext vs for each
 			try {
 				Dimension imgDim = readImageDimensions(file);
+				System.out.println(imgDim);
 				if ( imgDim.width != xy.width || imgDim.height != xy.height ) {
 					return false;
 				}

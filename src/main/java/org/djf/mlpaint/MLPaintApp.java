@@ -199,7 +199,7 @@ public class MLPaintApp extends SwingApp {
 		boolean consistent = SwingUtil.isSameDimensions(xy.bigDim,jfc.getSelectedFiles());
 		if (!consistent) {
 			status("Not all the selected images had the same dimensions.");
-			return;
+			//return;
 		}
 		// 3. Load downsampled images for all the layers
 		// 4. When saving to _labels.png, remember to upsample the result    //REDUCE the DEM layer to 8 bits, grayscale, per pixel, reduce distances to a byte, not a double. Size of things match.
@@ -214,12 +214,12 @@ public class MLPaintApp extends SwingApp {
 			//BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
-			if (file.toString().contains("_RGB")) {
+			if (file.toString().endsWith("_RGB")) {
 				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
 				currentImageMetadata = metadata;
 				System.out.print(metadata);
-			} else if (file.toString().contains("_labels")) {
+			} else if (file.toString().endsWith("_labels")) {
 				labels = img;
 				currentLabelsMetadata = metadata;
 				System.out.print(metadata);
