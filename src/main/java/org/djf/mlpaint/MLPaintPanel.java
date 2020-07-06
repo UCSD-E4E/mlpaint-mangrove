@@ -11,6 +11,7 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.nio.Buffer;
@@ -23,6 +24,7 @@ import javax.swing.JComponent;
 import com.google.common.math.Stats;
 import com.google.common.math.StatsAccumulator;
 import javafx.beans.property.SimpleBooleanProperty;
+import org.bytedeco.javacpp.annotation.Index;
 import org.djf.util.SwingUtil;
 
 import com.google.common.base.Preconditions;
@@ -153,13 +155,16 @@ public class MLPaintPanel extends JComponent
 //			SwingUtil.copyImage(labels, labels2);
 //			System.out.println("We copied in a labels object.");
 //		}
-		labels = labels2;
-		if (labels == null) {
+		if (labels2 == null) {
 			//labels = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
 			labels = SwingUtil.newBinaryImage(width, height, LABEL_COLORS);
 			System.out.println("We created a blank labels object.");
 			//TODO: make this a toggle
 			//TODO: scrub any isolated Color.white pixels, make sure it's connected to a no_data component.
+		} else {
+			IndexColorModel icm = SwingUtil.newBinaryICM(LABEL_COLORS);
+			WritableRaster raster = labels2.getRaster();
+			labels = new BufferedImage(icm, raster, false, null);
 		}
 		SwingUtil.fillCodeByCornerColor(image, labels, NO_DATA);
 		undoLabels.clear();
@@ -439,7 +444,14 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "Image drawn.");
 		}
 
-		if (listQueues != null && queueBoundsIdx >= 0) {
+		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+		if (noRelabel) {
+			g2.drawImage(labels, 0, 0, null);
+		}
+		g2.drawImage(visLabels, 0, 0, null);
+		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area.");
+
+		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
 			g2.setColor(FRESH_COLORS[FRESH_POS] );
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
 				g2.drawRect(edgePoint.x, edgePoint.y, 3, 3);
@@ -453,10 +465,6 @@ public class MLPaintPanel extends JComponent
 		}
 
 
-		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
-		//g2.drawImage(labels, 0, 0, null);
-		g2.drawImage(visLabels, 0, 0, null);
-		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area..");
 
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
@@ -584,9 +592,11 @@ public class MLPaintPanel extends JComponent
 		int nall = npos + nneg;
 
 		// Convert xys to feature vectors and convert dataset into SMILE format
-		double[][] fvs = Streams.concat(positives.stream().limit( maxPositives),
-										negatives.stream().limit( maxNegatives))
-				.map(x -> getFeatureVector(x))
+		double[][] positiveFvs = positives.stream().limit( maxPositives)
+				.map(x -> getFeatureVector(x)).toArray(double[][]::new);
+		double[][] negativeFvs = negatives.stream().limit( maxNegatives)
+				.map(x -> getFeatureVector(x)).toArray(double[][]::new);
+		double[][] fvs = Streams.concat(Arrays.stream(positiveFvs), Arrays.stream(negativeFvs))
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
 				.map(i -> i < npos ? 1 : 0)// positives first
@@ -599,16 +609,42 @@ public class MLPaintPanel extends JComponent
 				nall, nFeatures, 100.0 * npos / nall);
 
 		// train the SVM or whatever model
-		int maxIters = 500;
+		int maxIters = 35;
 		double C = 1.0;//TODO
 		double lambda = 0.1;// 
 		double tolerance = 1e-5;
+		t = reportTime(t, "prepared for PU classifier training");
 		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
 		// classifier = SVM.fit(fvs, ylabels, C, tolerance);
 		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
 		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
-		
+
+
+		double[] outputs1 = new double[2];
+		StatsAccumulator findPct = new StatsAccumulator();
+		Arrays.stream(positiveFvs)
+				.map(fv -> getClassifierProbPos(fv, outputs1))
+				.forEach(prob -> findPct.add(prob));
+		double posMeanProbPos = findPct.mean();
+		double posStdDevProbPos = findPct.sampleStandardDeviation();
+		double posPctile = posMeanProbPos;
+
+		fvs = Streams.concat(Arrays.stream(positiveFvs),
+							Arrays.stream(negativeFvs)
+							.filter( fv -> (getClassifierProbPos(fv, outputs1) < posPctile)))
+			.toArray(double[][]::new);
+		nall = fvs.length;
+		ylabels = IntStream.range(0, nall)
+				.map(i -> i < npos ? 1 : 0)// positives first
+				.toArray();
+
+		maxIters = 100;
+		t = reportTime(t, "prepared for real classifier training");
+		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
+		t = reportTime(t, "trained real classifier: %d rows x %d features, %.1f%% positive",
+				nall, nFeatures, 100.0 * npos / nall);
+
 		if (classifierOutput != null) {
 			classifierOutput = runClassifier();
 		}
@@ -704,7 +740,13 @@ public class MLPaintPanel extends JComponent
 
 	private double[] getFeatureVector(int... xy) {
 		//return getPatchFeatures(xy);
-		return getColorVector(xy);
+		double[] cv = getColorVector(xy);
+		double[] xlv = extraLayersVector(xy);
+
+		double[] jointFv = Streams.concat(
+				Arrays.stream(cv), Arrays.stream(xlv)
+		).toArray();
+		return jointFv;
 	}
 
 	private double[] getColorVector(int... xy){
@@ -752,6 +794,21 @@ public class MLPaintPanel extends JComponent
 				Arrays.stream(fv).mapToDouble(m -> m.mean()),
 				Arrays.stream(fv).mapToDouble(m -> m.sampleStandardDeviation())
 		).toArray();
+	}
+
+	private double[] extraLayersVector(int... xy) {
+		//Preconditions.checkArgument(xy.length == 2, "This is not an xy pair.");
+		int x = xy[0];
+		int y = xy[1];
+		int sizeExtraLayers = extraLayers.size();
+		double[] rr = new double[sizeExtraLayers];
+		int i = 0;
+		for (BufferedImage bi : extraLayers.values()) {
+			WritableRaster wr = bi.getRaster();
+			rr[i] = wr.getSample(x,y,0);
+			i++;
+		}
+		return rr;
 	}
 
 	void initDijkstra() {
@@ -928,12 +985,21 @@ public class MLPaintPanel extends JComponent
 
 	/**Return the probability of a negative value, so positive is low. */
 	private double getClassifierProbNeg(int x, int y) {
-		double[] outputs = new double[2];
 		double[] fv = getFeatureVector(x, y);
+		double score0 = getClassifierProbNeg(fv);
+		return score0;
+	}
+
+	private double getClassifierProbNeg(double[] fv) {
+		double[] outputs = new double[2];
 		classifier.predict(fv, outputs);
 		double score0 = outputs[0];// probability in [0,1] of class 0, negative
 		double score1 = outputs[1];// probability in [0,1] of class 1, positive
 		return score0;
+	}
+	private double getClassifierProbPos(double[] fv, double[] outputs) {
+		classifier.predict(fv, outputs);
+		return outputs[1];// probability in [0,1] of class 1, positive
 	}
 
 

@@ -30,7 +30,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
-	private static final int maxPixels = (int) Math.pow(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private static final int maxPixels = (int) Math.pow(2,26); //(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
 	private ImageResamplingDims xy;
 
 	private Path currentImageFile;
@@ -153,6 +153,11 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
 				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5')),
 				null);
+
+		JMenu help = new JMenu("Help—With an Intro to the MLPaint Labeling Workflow ");
+		SwingLink link = new SwingLink(" An Intro to the MLPaint Labeling Workflow ",
+				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
+		help.add(link);
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
 
@@ -160,6 +165,7 @@ public class MLPaintApp extends SwingApp {
 		rr.add(file);
 		rr.add(view);
 		rr.add(label);
+		rr.add(link);
 		return rr;
 	}
 
@@ -239,8 +245,8 @@ public class MLPaintApp extends SwingApp {
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
 		// For now: compressed TIFF is good
-		String extension = ".png"; //".tif";
-		String formatName = "png"; //"tiff";
+		String extension = ".tif"; //".tif"".png";
+		String formatName = "tiff"; //"tiff" "png";
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.

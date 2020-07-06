@@ -33,7 +33,7 @@ public class SwingUtil {
 	public static final Color ALPHABLUE  = new Color(0,0,1,.2f);
 	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
 	public static final Color ALPHAGRAY = new Color(0, 0, 0, .5f);
-	public static final Color ALPHABLACK = new Color(0, 0, 0, .8f);
+	public static final Color ALPHABLACK = new Color(0, 0, 0, .7f);
 	public static final Color SKYBLUE = new Color(41,204, 255);
 	public static final Color SKYRED = new Color(255, 119, 54);
 	public static final Color BACKGROUND_GRAY = new Color(238,238,238);
@@ -41,10 +41,18 @@ public class SwingUtil {
 	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
 	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {
 		Preconditions.checkArgument(colors.length <= 16, "Colors.length must be <= 16");
-		int bitsPerPixel = 
+		IndexColorModel icm = newBinaryICM(colors);
+		return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY, icm);
+	}
+
+	/** get a colormodel for a TYPE_BYTE_BINARY buffered image
+	 * see newBinaryImage(), this function's chief use */
+	public static IndexColorModel newBinaryICM(Color... colors) {
+		Preconditions.checkArgument(colors.length <= 16, "Colors.length must be <= 16");
+		int bitsPerPixel =
 				colors.length <= 2 ? 1 :
-			    colors.length <= 4 ? 2 :
-			    	4;
+						colors.length <= 4 ? 2 :
+								4;
 		int size = 1 << bitsPerPixel;								//GROC
 		byte[] r = new byte[size];
 		byte[] g = new byte[size];
@@ -57,7 +65,7 @@ public class SwingUtil {
 			a[i] = (byte) colors[i].getAlpha();
 		}
 		IndexColorModel icm = new IndexColorModel(bitsPerPixel, size, r, g, b, a);
-		return new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY, icm);
+		return icm;
 	}
 
 	public static void fillImage(BufferedImage img, int intVal) {
