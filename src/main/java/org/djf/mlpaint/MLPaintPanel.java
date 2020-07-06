@@ -805,7 +805,11 @@ public class MLPaintPanel extends JComponent
 		int i = 0;
 		for (BufferedImage bi : extraLayers.values()) {
 			WritableRaster wr = bi.getRaster();
-			rr[i] = wr.getSample(x,y,0);
+			try {
+				rr[i] = wr.getSample(x, y, 0);
+			} catch (IndexOutOfBoundsException e) {
+				rr[i] = 0.0;
+			}
 			i++;
 		}
 		return rr;
