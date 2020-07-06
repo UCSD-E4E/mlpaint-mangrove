@@ -34,7 +34,6 @@ public class MLPaintApp extends SwingApp {
 	private ImageResamplingDims xy;
 
 	private Path currentImageFile;
-	private Path possibleImageFileNo_RGB;
 
 	private IIOMetadata currentImageMetadata = null;
 	private IIOMetadata currentLabelsMetadata = null;
@@ -177,10 +176,13 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private void openImage() throws IOException {
+		Path possibleImageFileNo_RGB = null;
+		Path labelsFile = null;
+
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
-		
+
 		// currently the user selects all the layers to load
 		// MAYDO: instead, the user could just select the main file, 
 		// and we could auto-identify the others somehow; (optionally offering to the user to filter away some
@@ -197,7 +199,7 @@ public class MLPaintApp extends SwingApp {
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
 		xy = new ImageResamplingDims(jfc.getSelectedFiles()[0], maxPixels);
-		boolean consistent = SwingUtil.isSameDimensions(xy.bigDim,jfc.getSelectedFiles());
+		boolean consistent = SwingUtil.isSameDimensions(xy.bigDim, jfc.getSelectedFiles());
 		if (!consistent) {
 			status("Not all the selected images had the same dimensions.");
 			//return;
@@ -209,7 +211,7 @@ public class MLPaintApp extends SwingApp {
 		BufferedImage labels = null;
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
-		for (File file: jfc.getSelectedFiles()) {
+		for (File file : jfc.getSelectedFiles()) {
 			IIOMetadata metadata = null;
 			BufferedImage img = SwingUtil.subsampleImageFile(file, xy, metadata);
 			//BufferedImage img = ImageIO.read(file);
@@ -222,8 +224,9 @@ public class MLPaintApp extends SwingApp {
 				//System.out.print(metadata);
 			} else if (file.toString().endsWith("_labels")) {
 				labels = img;
+				labelsFile = file.toPath();
 				currentLabelsMetadata = metadata;
-				System.out.print(metadata);
+				//System.out.print(metadata);
 				System.out.println("We got a labels file.");
 			} else {
 				extraLayers.put(file.getName(), img);
@@ -231,11 +234,17 @@ public class MLPaintApp extends SwingApp {
 			}
 		}
 		if (image == null && extraLayers.size() == 1) {
-			for (BufferedImage bi: extraLayers.values()) {
+			//Maydo: Allow adding an extra layer after initially loading an image.
+			//That way, one might load an extra layer in a different directory or that is hard to select.
+			for (BufferedImage bi : extraLayers.values()) {
 				image = bi;
+				currentImageFile = possibleImageFileNo_RGB;
 			}
-			currentImageFile = possibleImageFileNo_RGB;
-		} else if (image == null) {
+		} else if (image == null && extraLayers.size() == 0) {
+			image = labels;
+			currentImageFile = labelsFile;
+		}
+		if (image == null) {
 			throw new IllegalArgumentException("Must provide the _RGB image");// appears in status bar in red
 		}
 		// My original design REPLACED the mlp, but it was forever not re-painting.
