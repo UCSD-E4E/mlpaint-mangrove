@@ -85,34 +85,40 @@ public class SwingUtil {
 								{img.getWidth()-1, img.getHeight()-1},
 								{img.getWidth()-1,0} };
 		int imgMainCode = img.getSample(fourCorners[0][0], fourCorners[0][1], 0);
-		Color imageColor = new Color(imgCm.getRGB(imgMainCode));
-		System.out.print(imageColor);
+		System.out.println("We have a no_data color supposed: ");
+		try {
+			Color imageColor = new Color(imgCm.getRGB(imgMainCode));
+			System.out.print(imageColor);
+		} catch (IllegalArgumentException e) {
+			System.out.println("It not actually a printable RGB color.");
+		}
 		for (int[] pair : fourCorners) {
 			int imgCode = img.getSample(pair[0], pair[1], 0);
-			Color pxlColor = new Color(imgCm.getRGB(imgCode));
-			System.out.print(pxlColor);
-			if (!pxlColor.equals(imageColor)) {
+			try {
+				Color pxlColor = new Color(imgCm.getRGB(imgCode));
+				System.out.print(pxlColor);
+			} catch (IllegalArgumentException e) {
+
+			}
+			if (imgMainCode != imgCode) {
 				System.out.println("The colors at the four corners were not consistent. \n" +
 						"So we did not use it for a no_data code in labels.");
 				return;
 			}
 		}
-		System.out.println("We have a no_data color supposed: ");
-		System.out.print(imageColor);
 		System.out.println("We got the same color in the four corners of the image. \n" +
 				"So fill it in with NO_DATA for the labels image.");
-		fillCodeByColor(image, imageColor, labels, labelsCode);
+		fillCodeByColor(image, imgMainCode, labels, labelsCode);
 	}
 
-	public static void fillCodeByColor(BufferedImage image, Color imageColor, BufferedImage labels, int labelsCode) {
+	public static void fillCodeByColor(BufferedImage image, int imgMainCode, BufferedImage labels, int labelsCode) {
 		WritableRaster img = image.getRaster();
 		WritableRaster lbl = labels.getRaster();
 		ColorModel imgCm = image.getColorModel();
 		for (int i=0; i < img.getWidth(); i++ ) {
 			for (int j=0; j < img.getHeight(); j++) {
 				int imgCode = img.getSample(i,j,0);
-				Color pxlColor = new Color(imgCm.getRGB(imgCode));
-				if (pxlColor.equals(imageColor)) {
+				if (imgCode == imgMainCode) {
 					lbl.setSample(i, j, 0, labelsCode);
 				}
 			}
@@ -227,6 +233,13 @@ public class SwingUtil {
 		reader.removeAllIIOReadProgressListeners();
 
 		return resampledImage;
+
+//		ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifier.createFromRenderedImage(input);
+//		int imageType = imageTypeSpecifier.getBufferedImageType();
+//		//I don't like this hack
+//		if (imageType == BufferedImage.TYPE_CUSTOM) {
+//			imageType = BufferedImage.TYPE_BYTE_GRAY;
+//		}
 	}
 
 

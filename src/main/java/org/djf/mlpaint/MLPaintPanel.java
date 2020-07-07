@@ -175,8 +175,9 @@ public class MLPaintPanel extends JComponent
 		Preconditions.checkArgument(width  == labels.getWidth() && height == labels.getHeight(),
 				"The labels size does not match the image size.");
 		extraLayers.values().forEach(im -> {
-			Preconditions.checkArgument(width  == im.getWidth() && height == im.getHeight(),
-					"The extra layer size does not match the image size.");
+			Preconditions.checkArgument(width  < im.getWidth() + 5 && height < im.getHeight()+5
+												&& width  > im.getWidth()- 5 && height > im.getHeight()-5,
+					"The extra layer size does not match the image size, is not within 5 pixels.");
 		});
 		initializeFreshPaint();
 		distances = new float[width][height];
@@ -268,7 +269,7 @@ public class MLPaintPanel extends JComponent
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
-			spareClassifierForGrowth();
+			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 		}
 		mousePrev = null;
 		e.consume();
@@ -824,14 +825,12 @@ public class MLPaintPanel extends JComponent
 		//return getPatchFeatures(xy);
 		double[] cv = getColorVector(xy);
 		//double[] cv = getPatchFeatures(xy);
-		if (false) {
-			double[] xlv = extraLayersVector(xy);
+		double[] xlv = extraLayersVector(xy);
 
-			double[] jointFv = Streams.concat(
-					Arrays.stream(cv), Arrays.stream(xlv)
-			).toArray();
-		}
-		return cv;
+		double[] jointFv = Streams.concat(
+				Arrays.stream(cv), Arrays.stream(xlv)
+		).toArray();
+		return jointFv;
 	}
 
 	private double[] getColorVector(int... xy){
