@@ -1,0 +1,38 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="MLPaint:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/MLPaint_jar</output-path>
+    <root id="archive" name="MLPaint.jar">
+      <element id="module-output" name="MLPaint.main" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/netlib-native_system-linux-armhf/1.1/27ae9f6a9c88b3f8d12ffa52d62941615f8ed416/netlib-native_system-linux-armhf-1.1-natives.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.haifengl/smile-math/2.4.0/47715a8cc6c37ae0c1b4084f48a5788c4ce7bc49/smile-math-2.4.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.1/905075e6c80f206bbe6cf1e809d2caa69f420c76/commons-lang3-3.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.bytedeco.javacpp-presets/mkl/2018.1-1.4/a896d4f1209b22b623cb6e0310527d8f94d57e00/mkl-2018.1-1.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/28.0-jre/54fed371b4b8a8cce1e94a9abd9620982d3aa54b/guava-28.0-jre.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.bytedeco/javacpp/1.4/6e9062d70f863a4e55b3827d42d302f94e89d7e5/javacpp-1.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.codehaus.mojo/animal-sniffer-annotations/1.17/f97ce6decaea32b36101e37979f8b647f00681fb/animal-sniffer-annotations-1.17.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.1/1dcf1de382a0bf95a3d8b0849546c88bac1292c9/failureaccess-1.0.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/net.sourceforge.f2j/arpack_combined_all/0.1/225619a060b42605b4d9fd4af11815664abf26eb/arpack_combined_all-0.1.jar" path-in-jar="/" />
+      <element id="library" level="project" name="Gradle: org.gdal:gdal:pom:3.1.0" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/1.3/ba035118bc8bac37d7eff77700720999acd9986d/j2objc-annotations-1.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/2.8.1/eb2e8ab75598548cc8acf9a1ca227e480e01881e/checker-qual-2.8.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/netlib-native_system-win-x86_64/1.1/222c7915be1daf1c26a4206f375d4957ae5f9d81/netlib-native_system-win-x86_64-1.1-natives.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.haifengl/smile-graph/2.4.0/5a7065eede947a45b9cbd39123c94cf6551b9830/smile-graph-2.4.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/1.7.30/b5a4b6d16ab13e34a88fae84c35cd5d68cac922c/slf4j-api-1.7.30.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.haifengl/smile-data/2.4.0/850356103e67b709e494b843269a5e20b31fa5aa/smile-data-2.4.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.3.2/d1a0c5032570e0f64be6b4d9c90cdeb103129029/error_prone_annotations-2.3.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/native_system-java/1.1/3c6a2455f96b354a6940dce1393abb35ed7641da/native_system-java-1.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil/jniloader/1.1/4840f897eeb54d67ee14e478f8a45cc9937f3ce1/jniloader-1.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.jai-imageio/jai-imageio-core/1.3.0/268feccd3a0fe32058ede66db41a21d9c7a9e535/jai-imageio-core-1.3.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-math3/3.6.1/e4ba98f1d4b3c80ec46392f25e094a6a2e58fcbf/commons-math3-3.6.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/netlib-native_system-osx-x86_64/1.1/d724e33675dc8eaa5c8fcb05a3aaca6f3339afa7/netlib-native_system-osx-x86_64-1.1-natives.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/core/1.1.2/574b480eca62f535fad6d259e144fee3ef24b66e/core-1.1.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.haifengl/smile-netlib/2.4.0/dc0626ddea092170b782873a604a1aafe45d85a5/smile-netlib-2.4.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/1.3/42a25dc3219429f0e5d060061f71acb49bf010a0/hamcrest-core-1.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.fommil.netlib/netlib-native_system-linux-x86_64/1.1/163e88facabe7fa29952890dc2d3429e28501120/netlib-native_system-linux-x86_64-1.1-natives.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/com.github.haifengl/smile-core/2.4.0/ea0efad92a668b0a86a393b99b74502371fbd1db/smile-core-2.4.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/junit/junit/4.12/2973d150c0dc1fefe998f834810d68f278ea58ec/junit-4.12.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
