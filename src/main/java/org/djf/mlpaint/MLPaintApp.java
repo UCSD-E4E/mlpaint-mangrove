@@ -176,15 +176,13 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private void openImage() throws IOException {
-		Path possibleImageFileNo_RGB = null;
-		Path labelsFile = null;
 
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
 
 		// currently the user selects all the layers to load
-		// MAYDO: instead, the user could just select the main file, 
+		// MAYDO: instead, the user could just select the main file,
 		// and we could auto-identify the others somehow; (optionally offering to the user to filter away some
 		// that they don't want to spent time/RAM/network loading)
 		jfc.setMultiSelectionEnabled(true);
@@ -209,6 +207,8 @@ public class MLPaintApp extends SwingApp {
 
 		BufferedImage image = null;
 		BufferedImage labels = null;
+		Path possibleImageFileNo_RGB = null;
+		Path labelsFile = null;
 		LinkedHashMap<String, BufferedImage> extraLayers = Maps.newLinkedHashMap();// keeps order
 		long t = System.currentTimeMillis();
 		for (File file : jfc.getSelectedFiles()) {
@@ -217,12 +217,12 @@ public class MLPaintApp extends SwingApp {
 			//BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
-			if (file.toString().endsWith("_RGB")) {
+			if (MoreFiles.getNameWithoutExtension(file.toPath()).endsWith("_RGB")) {
 				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
 				//currentImageMetadata = metadata;
 				//System.out.print(metadata);
-			} else if (file.toString().endsWith("_labels")) {
+			} else if (MoreFiles.getNameWithoutExtension(file.toPath()).endsWith("_labels")) {
 				labels = img;
 				labelsFile = file.toPath();
 				currentLabelsMetadata = metadata;

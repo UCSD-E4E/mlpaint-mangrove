@@ -98,6 +98,7 @@ public class MLPaintPanel extends JComponent
 	public double brushRadius = radiusFromChDigit('5');
 
 	private SoftClassifier<double[]> classifier;
+	private SoftClassifier<double[]> spareClassifier;
 	private final int maxPositives = 4000;
 	private final int maxNegatives = 8000;
 
@@ -265,9 +266,10 @@ public class MLPaintPanel extends JComponent
 			trainClassifier();
 			//classifierOutput = runClassifier();
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			repaint();
+			spareClassifierForGrowth();
 		}
 		mousePrev = null;
-		repaint();
 		e.consume();
 	}
 
@@ -573,45 +575,45 @@ public class MLPaintPanel extends JComponent
 			return;// silently return
 		}
 		//TODO: smarter testing / picking
-		//thoughts: Area provides getBounds rectangle, we could choose within that or at least a few times that.
-		// if not enough negatives, add additional negatives collected randomly
-		Random rand = new Random();
-		while (negatives.size() <= 2 * npos1 && negatives.size() <= maxNegatives) {// try 2x or 3x as many negatives
-			int x = rand.nextInt(width);
-			int y = rand.nextInt(height);
-			int index = rawdata.getSample(x, y, 0);// returns 0 or 1
-			if (index == FRESH_UNLABELED) {
-				negatives.add(new int[]{x,y});
-			}
-		}
-		nneg1 = negatives.size();
-		t = reportTime(t, "We got indexes of enough negatives to complement the positives fully.");
+		getRandNegatives(rawdata, npos1, negatives);
 
-		int npos = Math.min(maxPositives, npos1);
-		int nneg = Math.min(maxNegatives, nneg1);
-		int nall = npos + nneg;
+		getFvsTrainPUClassifier(positives, negatives, classifier);
+
+		if (classifierOutput != null) {
+			classifierOutput = runClassifier();
+		}
+	}
+
+	private void getFvsTrainPUClassifier(List<int[]> positives, List<int[]> negatives,
+										 SoftClassifier<double[]> classifier) {
+		long t = System.currentTimeMillis();
 
 		// Convert xys to feature vectors and convert dataset into SMILE format
 		double[][] positiveFvs = positives.stream().limit( maxPositives)
 				.map(x -> getFeatureVector(x)).toArray(double[][]::new);
 		double[][] negativeFvs = negatives.stream().limit( maxNegatives)
 				.map(x -> getFeatureVector(x)).toArray(double[][]::new);
+
+		//Get lengths
+		int nFeatures = positiveFvs[0].length;
+		int npos = positiveFvs.length;
+		int nneg = negativeFvs.length;
+		int nall = npos + nneg;
+
+		//Get fvs all in a single list, labels too in a single list.
 		double[][] fvs = Streams.concat(Arrays.stream(positiveFvs), Arrays.stream(negativeFvs))
 				.toArray(double[][]::new);
 		int[] ylabels = IntStream.range(0, nall)
 				.map(i -> i < npos ? 1 : 0)// positives first
 				.toArray();
 
-		int nFeatures = fvs[0].length;
-
 		t = reportTime(t, "Converted all the xy to feature vectors, %,d pos and %,d neg.",npos,nneg);
 		t = reportTime(t, "no op -- ready to train classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
-
 		// train the SVM or whatever model
 		int maxIters = 35;
 		double C = 1.0;//TODO
-		double lambda = 0.1;// 
+		double lambda = 0.1;//
 		double tolerance = 1e-5;
 		t = reportTime(t, "prepared for PU classifier training");
 		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
@@ -644,17 +646,68 @@ public class MLPaintPanel extends JComponent
 		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
 		t = reportTime(t, "trained real classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
-
-		if (classifierOutput != null) {
-			classifierOutput = runClassifier();
-		}
 	}
 
-	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f, int code, int hopedSampleSize) {
-		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
-		List<int[]> acquisitions = Lists.newArrayListWithCapacity(hopedSampleSize);
+	private void getRandNegatives(WritableRaster rawdata, int npos1, List<int[]> negatives) {
+		boolean checkDist = false;
+		getRandNegatives(rawdata, npos1, negatives, checkDist);
+		return;
+	}
 
-		if (f.isEmpty()) return acquisitions;
+	private void getRandNegatives(WritableRaster rawdata, int npos1,
+								 List<int[]> negatives, boolean checkDist) {
+		long t = System.currentTimeMillis();
+		//thoughts: Area provides getBounds rectangle, we could choose within that or at least a few times that.
+		// if not enough negatives, add additional negatives collected randomly
+		Random rand = new Random();
+		while (negatives.size() <= 2 * npos1 && negatives.size() <= maxNegatives) {// try 2x or 3x as many negatives
+			int x = rand.nextInt(width);
+			int y = rand.nextInt(height);
+			int index = rawdata.getSample(x, y, 0);// returns 0 or 1
+			if 	 (!checkDist && index == FRESH_UNLABELED
+				|| checkDist && index == FRESH_UNLABELED && distances[x][y] == 0) {
+				negatives.add(new int[]{x, y});
+			}
+		}
+		int nneg1 = negatives.size();
+		t = reportTime(t, "We got indexes of enough negatives to complement the positives fully: %s",nneg1);
+		return;
+	}
+
+	/** Prepare a new classifier for if the labeler likes a suggested region and grows it.
+	 * Extract training set and train.
+	 * We're going to assume an initialized distances matrix.
+	 * Check nneg1 if extending this to apply to any but the biggest queue. */
+	public void spareClassifierForGrowth() {
+		long t = System.currentTimeMillis();
+
+		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
+
+		// extract positive examples from each fresh paint pixel where distances[x][y] < thresholdIndex
+		int queueIndex = listQueues.size() - 1; // Consider the checkDist: true down at getRandNegs if you change this.
+		int[] boundsPositives = getQueueBounds(queueIndex);
+		double thresh = getThresholdDistance(queueIndex);
+		List<int[]> positives = sampleInSuggestion(boundsPositives, thresh, maxNegatives);
+		int npos1 = positives.size();
+
+		if (npos1 < 100) {// not enough
+			return;// silently return
+		}
+
+		//	This section is identical to trainClassifier
+		Rectangle g = antiPaintArea.getBounds();
+		List<int[]> negatives = sampleFreshPosNeg(rawdata, g, FRESH_NEG, maxNegatives / 2);
+		int nneg1 = negatives.size();
+
+		t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.", npos1, nneg1);
+
+		getRandNegatives(rawdata, npos1, negatives, true);
+		getFvsTrainPUClassifier(positives, negatives, spareClassifier);
+		//TODO: Ensure that runClassifier updates when proper to the correct backdrop...
+	}
+
+	private int[] getxyminxymax(Rectangle f) {
+		if (f.isEmpty()) return new int[]{-1,-1,-1,-1};
 
 		int floory = f.y < 0 ? 0 : f.y ;
 		int capy = f.y + f.height + 1 > height ? height : f.y + f.height + 1;
@@ -663,14 +716,30 @@ public class MLPaintPanel extends JComponent
 		if (capx == width || capy == height || floory == 0 || floorx == 0) {
 			System.out.println("We flew to a world edge to constrain our feature vector collection.");
 		}
-		System.out.printf("Here is top x: %,d. \n",f.x);
-		System.out.printf("Here is top y: %,d. \n",f.y);
-		System.out.printf("Here is width: %,d. \n",f.width);
-		System.out.printf("Here is height: %,d. \n",f.height);
-		System.out.printf("Here is floory: %,d. \n",floory);
-		System.out.printf("Here is capy: %,d. \n",capy);
-		System.out.printf("Here is floorx: %,d. \n",floorx);
-		System.out.printf("Here is capx: %,d. \n",capx);
+		return new int[]{floorx, floory, capx, capy}
+	}
+
+	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f, int code, int hopedSampleSize) {
+		int[] bounds = getxyminxymax(f);
+		return sampleFreshPosNeg(rawdata, bounds, code, hopedSampleSize);
+	}
+
+	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, int[] xyminxymax, int code, int hopedSampleSize) {
+		return subAllSampling(rawdata, xyminxymax, code, hopedSampleSize, -1.0);
+	}
+	private List<int[]> sampleInSuggestion( int[] xyminxymax, double thresh,int hopedSampleSize) {
+		return subAllSampling(null, xyminxymax, -1, hopedSampleSize, thresh);
+	}
+	private List<int[]> subAllSampling(WritableRaster rawdata, int[] xyminxymax, int code, int hopedSampleSize,
+									   double thresh) { //Use rawdata as a flag for whether we want thresh or not
+		long t = System.currentTimeMillis();          				//MAYDO: Why have a max capacity?Shouldn't we randomly sample if so?
+		List<int[]> acquisitions = Lists.newArrayListWithCapacity(hopedSampleSize);
+
+		int floorx = xyminxymax[0];
+		int floory = xyminxymax[1];
+		int capx = xyminxymax[2];
+		int capy = xyminxymax[3];
+
 		t = reportTime(t, "Setup using the Shape Area bounds, freshpaint, etc.");
 
 		// 1) Get a good grid size: Area / gridLength^2 < maxPositives/10
@@ -704,28 +773,40 @@ public class MLPaintPanel extends JComponent
 				for (int j = floory; j < capy; j+= gridLength) {
 					int y = j + upy;
 					if (y >= capy) continue;
-					int index = rawdata.getSample(x, y, 0);// band 0
-					if (index == code) {
-						acquisitions.add(new int[]{x, y});
+
+					if (rawdata == null) {
+						if (distances[x][y] < thresh) {
+							acquisitions.add(   new int[]{x, y});
+					} else {
+							int index = rawdata.getSample(x, y, 0);// band 0
+							if (index == code) {
+								acquisitions.add(new int[]{x, y});
+							}
+							histogram[index]++;
+						}
 					}
-					histogram[index]++;
 				}
 			}
 		}
 
 		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 
-		int nacquired = histogram[code];
+		if (rawdata != null) {
+			int nacquired = histogram[code];
+			if (code == FRESH_POS) {
+				int estimateTotal = (int) (area * (double) histogram[code] / Arrays.stream(histogram).sum());
+				freshPaintNumPositives = estimateTotal;
+				System.out.printf("We set freshPaintNumPositives to %,d. \n", estimateTotal);
+			}
 
-		if (code == FRESH_POS) {
-			int estimateTotal = (int) ( area * (double) histogram[code] / Arrays.stream(histogram).sum() );
-			freshPaintNumPositives = estimateTotal;
-			System.out.printf("We set freshPaintNumPositives to %,d. \n", estimateTotal);
+			t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
+							"extracted %,d of code %,d from %s x %s bounds for fresh paint",
+					nacquired, code, (capx - floorx), (capy - floory));
+		} else {
+			t = reportTime(t, "We got the x,y for each of the pixels within the Dijkstra threshold. \n" +
+					"extracted %,d positives from %s x %s bounds for Dijkstra suggestion",
+					acquisitions.size(),(capx-floorx), (capy-floory));
 		}
-
-		t = reportTime(t, "We got the x,y for each of the fresh paint pixels in the image.\n" +
-						"extracted %,d of code %,d from %s x %s bounds for fresh paint",
-				nacquired, code, (capx-floorx), (capy - floory));
 		return acquisitions;
 	}
 
@@ -741,6 +822,7 @@ public class MLPaintPanel extends JComponent
 	private double[] getFeatureVector(int... xy) {
 		//return getPatchFeatures(xy);
 		double[] cv = getColorVector(xy);
+		//double[] cv = getPatchFeatures(xy);
 		double[] xlv = extraLayersVector(xy);
 
 		double[] jointFv = Streams.concat(
@@ -1028,6 +1110,11 @@ public class MLPaintPanel extends JComponent
 		queueBoundsIdx += 1;
 		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
 		if (listQueues.size() == queueBoundsIdx) {
+			if (spareClassifier != null) {
+				classifier = spareClassifier;
+				spareClassifier = null;
+			}
+
 			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1-interiorSteps)*0.02);
 			growDijkstra(repsIncrement);
 		}
@@ -1067,13 +1154,20 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private double getThresholdDistance() {
-		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueBoundsIdx);
+		return getThresholdDistance(queueBoundsIdx);
+	}
+
+	private double getThresholdDistance(int queueIndex) {
+		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueIndex);
 		MyPoint lowestPoint = thisQueue.peek();
 		return lowestPoint.fuelCost;
 	}
 
 	private int[] getCurrentQueueBounds() {
-		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueBoundsIdx);
+		return getQueueBounds(queueBoundsIdx);
+	}
+	private int[] getQueueBounds(int queueIndex) {
+		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueIndex);
 		int xmin = width-1;
 		int ymin = height-1;
 		int xmax = 0;
