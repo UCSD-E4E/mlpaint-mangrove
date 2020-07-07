@@ -229,9 +229,23 @@ public class SwingUtil {
 		TIFFDirectory m1 = TIFFDirectory.createFromMetadata(m);
 		System.out.printf("We got the image metadata: %s", m1);
 
+		System.out.println("Here is the reader \n");
+		System.out.print(reader);
+		System.out.println("Here are the reader params. \n");
+		System.out.print(imageReaderParams.toString());
+
+		System.out.print(imageReaderParams.getDestinationType());
+		System.out.println("\n");
+//		imageReaderParams.setDestinationType(BufferedImage.TYPE_BYTE_GRAY);
+//		ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifier.createFromRenderedImage(input);
+//		int imageType = imageTypeSpecifier.getBufferedImageType();
+//		//I don't like this hack
+//		if (imageType == BufferedImage.TYPE_CUSTOM) {
+//			imageType = BufferedImage.TYPE_4BYTE_ABGR;
+//		}
+
 		resampledImage = reader.read(0, imageReaderParams);
 		reader.removeAllIIOReadProgressListeners();
-
 		return resampledImage;
 
 //		ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifier.createFromRenderedImage(input);

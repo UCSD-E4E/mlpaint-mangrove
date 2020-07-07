@@ -62,7 +62,7 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0001;
-	private static final int DEFAULT_DIJKSTRA_GROWTH = 26;
+	private static final int DEFAULT_DIJKSTRA_GROWTH = 36;
 	private static final int interiorSteps = 10;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
@@ -101,6 +101,7 @@ public class MLPaintPanel extends JComponent
 	private SoftClassifier<double[]> spareClassifier;
 	private final int maxPositives = 4000;
 	private final int maxNegatives = 8000;
+	private boolean isPULearning = true;
 
 	/** classifier output image, grayscale */
 	public BufferedImage classifierOutput; //GROK: Why was this made private?
@@ -269,7 +270,7 @@ public class MLPaintPanel extends JComponent
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
-			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
+			spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 		}
 		mousePrev = null;
 		e.consume();
@@ -597,6 +598,7 @@ public class MLPaintPanel extends JComponent
 
 		//Get lengths
 		int nFeatures = positiveFvs[0].length;
+		System.out.printf("Number of features for this training: %,d \n", nFeatures);
 		int npos = positiveFvs.length;
 		int nneg = negativeFvs.length;
 		int nall = npos + nneg;
@@ -611,39 +613,42 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Converted all the xy to feature vectors, %,d pos and %,d neg.",npos,nneg);
 		t = reportTime(t, "no op -- ready to train classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
+
 		// train the SVM or whatever model
-		int maxIters = 35;
+		int maxIters;
 		double C = 1.0;//TODO
 		double lambda = 0.1;//
 		double tolerance = 1e-5;
-		t = reportTime(t, "prepared for PU classifier training");
-		SoftClassifier<double[]> finalClassifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
-		// classifier = SVM.fit(fvs, ylabels, C, tolerance);
-		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
-		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
-				nall, nFeatures, 100.0 * npos / nall);
+		if (isPULearning) {
+			t = reportTime(t, "prepared for PU classifier training");
+			maxIters = 35;
+			SoftClassifier<double[]> finalClassifier = LogisticRegression.fit(fvs, ylabels, lambda, tolerance, maxIters); // Maybe try positive-unlabeled training.
+			// classifier = SVM.fit(fvs, ylabels, C, tolerance);
+			// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
+			t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
+					nall, nFeatures, 100.0 * npos / nall);
 
 
-		double[] outputs1 = new double[2];
-		StatsAccumulator findPct = new StatsAccumulator();
-		Arrays.stream(positiveFvs)
-				.map(fv -> getClassifierProbPos(fv, outputs1, finalClassifier))
-				.forEach(prob -> findPct.add(prob));
-		double posMeanProbPos = findPct.mean();
-		double posStdDevProbPos = findPct.sampleStandardDeviation();
-		double posPctile = posMeanProbPos;
+			double[] outputs1 = new double[2];
+			StatsAccumulator findPct = new StatsAccumulator();
+			Arrays.stream(positiveFvs)
+					.map(fv -> getClassifierProbPos(fv, outputs1, finalClassifier))
+					.forEach(prob -> findPct.add(prob));
+			double posMeanProbPos = findPct.mean();
+			double posStdDevProbPos = findPct.sampleStandardDeviation();
+			double posPctile = posMeanProbPos;
 
-		fvs = Streams.concat(Arrays.stream(positiveFvs),
-							Arrays.stream(negativeFvs)
-							.filter( fv -> (getClassifierProbPos(fv, outputs1, finalClassifier) < posPctile)))
-			.toArray(double[][]::new);
-		nall = fvs.length;
-		ylabels = IntStream.range(0, nall)
-				.map(i -> i < npos ? 1 : 0)// positives first
-				.toArray();
-
+			fvs = Streams.concat(Arrays.stream(positiveFvs),
+					Arrays.stream(negativeFvs)
+							.filter(fv -> (getClassifierProbPos(fv, outputs1, finalClassifier) < posPctile))
+			).toArray(double[][]::new);
+			nall = fvs.length;
+			ylabels = IntStream.range(0, nall)
+					.map(i -> i < npos ? 1 : 0)// positives first
+					.toArray();
+			t = reportTime(t, "prepared for real classifier training");
+		}
 		maxIters = 100;
-		t = reportTime(t, "prepared for real classifier training");
 		SoftClassifier<double[]> classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
 		t = reportTime(t, "trained real classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
@@ -1098,7 +1103,10 @@ public class MLPaintPanel extends JComponent
 	public BufferedImage runClassifier(SoftClassifier<double[]> classifier) {
 		long t = System.currentTimeMillis();
 		Preconditions.checkNotNull(classifier, "Must put positive paint down first");
-		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
+		BufferedImage out = classifierOutput;
+		if (out == null ) {
+			out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
+		}
 		WritableRaster raster = out.getRaster();
 		IntStream.range(0, width).parallel().forEach(x -> {// run in parallle for speed
 			for (int y = 0; y < height; y++) {
@@ -1119,6 +1127,7 @@ public class MLPaintPanel extends JComponent
 			if (spareClassifier != null) {
 				classifier = spareClassifier;
 				spareClassifier = null;
+				classifierOutput = runClassifier();
 			}
 
 			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1-interiorSteps)*0.02);
