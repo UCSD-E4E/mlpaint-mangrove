@@ -270,7 +270,7 @@ public class MLPaintPanel extends JComponent
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
-			spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
+			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 		}
 		mousePrev = null;
 		e.consume();
@@ -1129,7 +1129,9 @@ public class MLPaintPanel extends JComponent
 				classifier = spareClassifier;
 				System.out.println("We replaced the classifier with the spare classifier.");
 				spareClassifier = null;
-				classifierOutput = runClassifier();
+				if (classifierOutput != null){
+					classifierOutput = runClassifier();
+				}
 			}
 
 			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1-interiorSteps)*0.02);
