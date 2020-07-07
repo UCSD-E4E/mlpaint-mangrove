@@ -266,6 +266,7 @@ public class MLPaintPanel extends JComponent
 			trainClassifier();
 			//classifierOutput = runClassifier();
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+			mousePrev = null;
 			repaint();
 			spareClassifierForGrowth();
 		}
@@ -577,15 +578,14 @@ public class MLPaintPanel extends JComponent
 		//TODO: smarter testing / picking
 		getRandNegatives(rawdata, npos1, negatives);
 
-		getFvsTrainPUClassifier(positives, negatives, classifier);
+		classifier = getFvsTrainPUClassifier(positives, negatives);
 
 		if (classifierOutput != null) {
 			classifierOutput = runClassifier();
 		}
 	}
 
-	private void getFvsTrainPUClassifier(List<int[]> positives, List<int[]> negatives,
-										 SoftClassifier<double[]> classifier) {
+	private SoftClassifier<double[]> getFvsTrainPUClassifier(List<int[]> positives, List<int[]> negatives) {
 		long t = System.currentTimeMillis();
 
 		// Convert xys to feature vectors and convert dataset into SMILE format
@@ -616,7 +616,7 @@ public class MLPaintPanel extends JComponent
 		double lambda = 0.1;//
 		double tolerance = 1e-5;
 		t = reportTime(t, "prepared for PU classifier training");
-		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
+		SoftClassifier<double[]> finalClassifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters); // Maybe try positive-unlabeled training.
 		// classifier = SVM.fit(fvs, ylabels, C, tolerance);
 		// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
 		t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
@@ -626,7 +626,7 @@ public class MLPaintPanel extends JComponent
 		double[] outputs1 = new double[2];
 		StatsAccumulator findPct = new StatsAccumulator();
 		Arrays.stream(positiveFvs)
-				.map(fv -> getClassifierProbPos(fv, outputs1))
+				.map(fv -> getClassifierProbPos(fv, outputs1, finalClassifier))
 				.forEach(prob -> findPct.add(prob));
 		double posMeanProbPos = findPct.mean();
 		double posStdDevProbPos = findPct.sampleStandardDeviation();
@@ -634,7 +634,7 @@ public class MLPaintPanel extends JComponent
 
 		fvs = Streams.concat(Arrays.stream(positiveFvs),
 							Arrays.stream(negativeFvs)
-							.filter( fv -> (getClassifierProbPos(fv, outputs1) < posPctile)))
+							.filter( fv -> (getClassifierProbPos(fv, outputs1, finalClassifier) < posPctile)))
 			.toArray(double[][]::new);
 		nall = fvs.length;
 		ylabels = IntStream.range(0, nall)
@@ -643,9 +643,10 @@ public class MLPaintPanel extends JComponent
 
 		maxIters = 100;
 		t = reportTime(t, "prepared for real classifier training");
-		classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
+		SoftClassifier<double[]> classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
 		t = reportTime(t, "trained real classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
+		return classifier;
 	}
 
 	private void getRandNegatives(WritableRaster rawdata, int npos1, List<int[]> negatives) {
@@ -702,7 +703,7 @@ public class MLPaintPanel extends JComponent
 		t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.", npos1, nneg1);
 
 		getRandNegatives(rawdata, npos1, negatives, true);
-		getFvsTrainPUClassifier(positives, negatives, spareClassifier);
+		spareClassifier = getFvsTrainPUClassifier(positives, negatives);
 		//TODO: Ensure that runClassifier updates when proper to the correct backdrop...
 	}
 
@@ -727,7 +728,7 @@ public class MLPaintPanel extends JComponent
 	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, int[] xyminxymax, int code, int hopedSampleSize) {
 		return subAllSampling(rawdata, xyminxymax, code, hopedSampleSize, -1.0);
 	}
-	private List<int[]> sampleInSuggestion( int[] xyminxymax, double thresh,int hopedSampleSize) {
+	private List<int[]> sampleInSuggestion( int[] xyminxymax, double thresh, int hopedSampleSize) {
 		return subAllSampling(null, xyminxymax, -1, hopedSampleSize, thresh);
 	}
 	private List<int[]> subAllSampling(WritableRaster rawdata, int[] xyminxymax, int code, int hopedSampleSize,
@@ -775,23 +776,23 @@ public class MLPaintPanel extends JComponent
 					if (y >= capy) continue;
 
 					if (rawdata == null) {
-						if (distances[x][y] < thresh) {
-							acquisitions.add(   new int[]{x, y});
-					} else {
-							int index = rawdata.getSample(x, y, 0);// band 0
-							if (index == code) {
-								acquisitions.add(new int[]{x, y});
-							}
-							histogram[index]++;
+						if (distances[x][y] != 0 && distances[x][y] < thresh) {
+							acquisitions.add(new int[]{x, y});
 						}
+					} else {
+						int index = rawdata.getSample(x, y, 0);// band 0
+						if (index == code) {
+							acquisitions.add(new int[]{x, y});
+						}
+						histogram[index]++;
 					}
 				}
 			}
 		}
 
-		System.out.printf("L319  %s\n", Arrays.toString(histogram));
 
 		if (rawdata != null) {
+			System.out.printf("L319  %s\n", Arrays.toString(histogram));
 			int nacquired = histogram[code];
 			if (code == FRESH_POS) {
 				int estimateTotal = (int) (area * (double) histogram[code] / Arrays.stream(histogram).sum());
@@ -823,12 +824,14 @@ public class MLPaintPanel extends JComponent
 		//return getPatchFeatures(xy);
 		double[] cv = getColorVector(xy);
 		//double[] cv = getPatchFeatures(xy);
-		double[] xlv = extraLayersVector(xy);
+		if (false) {
+			double[] xlv = extraLayersVector(xy);
 
-		double[] jointFv = Streams.concat(
-				Arrays.stream(cv), Arrays.stream(xlv)
-		).toArray();
-		return jointFv;
+			double[] jointFv = Streams.concat(
+					Arrays.stream(cv), Arrays.stream(xlv)
+			).toArray();
+		}
+		return cv;
 	}
 
 	private double[] getColorVector(int... xy){
@@ -1030,7 +1033,7 @@ public class MLPaintPanel extends JComponent
 			return Double.POSITIVE_INFINITY;
 		}
 			// MAYDO: If it's off the affine view screen, don't label it.
-		double out = getClassifierProbNeg(x,y);
+		double out = getClassifierProbNeg(x,y, classifier);
 		out = getSoftScoreDistanceTransform(out);
 		return out;
 	}
@@ -1070,33 +1073,37 @@ public class MLPaintPanel extends JComponent
 	}
 
 	/**Return the probability of a negative value, so positive is low. */
-	private double getClassifierProbNeg(int x, int y) {
+	private double getClassifierProbNeg(int x, int y, SoftClassifier<double[]> classifier) {
 		double[] fv = getFeatureVector(x, y);
-		double score0 = getClassifierProbNeg(fv);
+		double score0 = getClassifierProbNeg(fv, classifier);
 		return score0;
 	}
 
-	private double getClassifierProbNeg(double[] fv) {
+	private double getClassifierProbNeg(double[] fv, SoftClassifier<double[]> classifier) {
 		double[] outputs = new double[2];
 		classifier.predict(fv, outputs);
 		double score0 = outputs[0];// probability in [0,1] of class 0, negative
 		double score1 = outputs[1];// probability in [0,1] of class 1, positive
 		return score0;
 	}
-	private double getClassifierProbPos(double[] fv, double[] outputs) {
+	private double getClassifierProbPos(double[] fv, double[] outputs, SoftClassifier<double[]> classifier) {
 		classifier.predict(fv, outputs);
 		return outputs[1];// probability in [0,1] of class 1, positive
 	}
 
 
-	public BufferedImage runClassifier() { //GROK: Why did you make this private?
+	public BufferedImage runClassifier() { //GROK: Why was this private?
+		return runClassifier(classifier);
+	}
+
+	public BufferedImage runClassifier(SoftClassifier<double[]> classifier) {
 		long t = System.currentTimeMillis();
 		Preconditions.checkNotNull(classifier, "Must put positive paint down first");
 		BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);// grayscale from 0.0 to 1.0 (aka 255)
 		WritableRaster raster = out.getRaster();
 		IntStream.range(0, width).parallel().forEach(x -> {// run in parallle for speed
 			for (int y = 0; y < height; y++) {
-				double score0 = getClassifierProbNeg(x,y);
+				double score0 = getClassifierProbNeg(x,y, classifier);
 				int index = (int) (255 * score0);
 				raster.setSample(x, y, 0, index);
 			}
