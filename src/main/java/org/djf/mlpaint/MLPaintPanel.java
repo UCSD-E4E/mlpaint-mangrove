@@ -716,7 +716,7 @@ public class MLPaintPanel extends JComponent
 		if (capx == width || capy == height || floory == 0 || floorx == 0) {
 			System.out.println("We flew to a world edge to constrain our feature vector collection.");
 		}
-		return new int[]{floorx, floory, capx, capy}
+		return new int[]{floorx, floory, capx, capy};
 	}
 
 	private List<int[]> sampleFreshPosNeg(WritableRaster rawdata, Rectangle f, int code, int hopedSampleSize) {
