@@ -111,7 +111,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	private float[][] distances;
 	private float[][] spareDistances = null; //= new double[width][height];
-	public double scorePower = 3.0;
+	public double scorePower = 1.5;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
 	private int dijkstraStep = 3; // For squares of 9 //This could be optimized so that if we zoom in
@@ -932,7 +932,7 @@ public class MLPaintPanel extends JComponent
 		for (int i=0; i < interiorSteps; i++) {
 			growDijkstra(repsIncrement);
 		}
-		for (int i=interiorSteps; i<queueBoundsIdx +1; i++) {
+		for (int i=interiorSteps; i<queueBoundsIdx; i++) {
 			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,i-interiorSteps)*0.02);
 			growDijkstra(repsIncrement);
 		}
@@ -1124,8 +1124,10 @@ public class MLPaintPanel extends JComponent
 		queueBoundsIdx += 1;
 		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
 		if (listQueues.size() == queueBoundsIdx) {
+			System.out.printf("Here is our spare classifier: %s",spareClassifier);
 			if (spareClassifier != null) {
 				classifier = spareClassifier;
+				System.out.println("We replaced the classifier with the spare classifier.");
 				spareClassifier = null;
 				classifierOutput = runClassifier();
 			}
