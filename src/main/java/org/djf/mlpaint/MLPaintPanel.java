@@ -23,7 +23,6 @@ import javax.swing.JComponent;
 
 import com.google.common.math.Stats;
 import com.google.common.math.StatsAccumulator;
-import javafx.beans.property.SimpleBooleanProperty;
 import org.bytedeco.javacpp.annotation.Index;
 import org.djf.util.SwingUtil;
 
@@ -37,6 +36,7 @@ import smile.classification.SoftClassifier;
 
 import static org.djf.util.SwingApp.reportTime;
 
+//JAR import javafx.beans.property.SimpleBooleanProperty;
 
 /** Magic Label Paint panel.
  *   This panel rests within the MLPaintApp.
@@ -103,8 +103,6 @@ public class MLPaintPanel extends JComponent
 	private final int maxNegatives = 8000;
 	private boolean isPULearning = true;
 
-	/** classifier output image, grayscale */
-	public BufferedImage classifierOutput; //GROK: Why was this made private?
 
 	/** Distance to each pixel from fresh paint-derived seed points, initially +infinity.
 	 * Allocated for (width x height) of image, but maybe not computed for 100% of image to reduce computation.
@@ -126,10 +124,13 @@ public class MLPaintPanel extends JComponent
 
 	/** previous mouse event when drawing/dragging */
 	private MouseEvent mousePrev;
-
-	/** clients can toggle this property and we automatically repaint() */
-	public final SimpleBooleanProperty showClassifier = new SimpleBooleanProperty();
 	private Point2D cursor;
+
+//JAR	/** clients can toggle this property and we automatically repaint() */
+//JAR	public final SimpleBooleanProperty showClassifier = new SimpleBooleanProperty();
+	public boolean showClassifierC = false;
+	/** classifier output image, grayscale */
+	public BufferedImage classifierOutput; //GROK: Why was this made private?
 
 
 	public MLPaintPanel() {
@@ -140,7 +141,7 @@ public class MLPaintPanel extends JComponent
 		addKeyListener(this);// or else https://docs.oracle.com/javase/tutorial/uiswing/misc/keybinding.html
 		setOpaque(true);
 		setFocusable(true);// allow key events
-		showClassifier.addListener(event -> repaint());
+//JAR		showClassifier.addListener(event -> repaint());
 	}
 
 	public void resetData(BufferedImage masterImage, BufferedImage labels2,
@@ -191,7 +192,7 @@ public class MLPaintPanel extends JComponent
 		view = new AffineTransform();
 		double scale =  925.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
 		view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
-		showClassifier.set(false);
+		showClassifierC = false; //JAR		showClassifier.set(false);
 		brushRadius = radiusFromChDigit('5');
 		repaint();
 	}
@@ -266,7 +267,9 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() ) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
-			//classifierOutput = runClassifier();
+			if (showClassifierC) {
+				classifierOutput = runClassifier();
+			}
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
@@ -441,7 +444,7 @@ public class MLPaintPanel extends JComponent
 		g2.transform(view);
 		t = reportTime(t, "Initialized the g2 graphic for repainting.");
 
-		if (showClassifier.get()) {                           // MAYDO: instead have a transparency slider??  That'd be cool.
+		if (showClassifierC) {                           // MAYDO: instead have a transparency slider??  That'd be cool.
 			g2.drawImage(classifierOutput, 0, 0, null);
 			t = reportTime(t, "Classifier output drawn.");
 		} else {
@@ -582,9 +585,6 @@ public class MLPaintPanel extends JComponent
 
 		classifier = getFvsTrainPUClassifier(positives, negatives);
 
-		if (classifierOutput != null) {
-			classifierOutput = runClassifier();
-		}
 	}
 
 	private SoftClassifier<double[]> getFvsTrainPUClassifier(List<int[]> positives, List<int[]> negatives) {
@@ -1129,7 +1129,7 @@ public class MLPaintPanel extends JComponent
 				classifier = spareClassifier;
 				System.out.println("We replaced the classifier with the spare classifier.");
 				spareClassifier = null;
-				if (classifierOutput != null){
+				if (showClassifierC){
 					classifierOutput = runClassifier();
 				}
 			}

@@ -100,11 +100,11 @@ public class MLPaintApp extends SwingApp {
 	private void makeBehavior() {
 		showClassifier.setAccelerator(KeyStroke.getKeyStroke("control  T"));
 		showClassifier.addActionListener(event -> {
-			mlp.showClassifier.set(showClassifier.isSelected());
-			if (mlp.classifierOutput == null) {  //TODO: I feel terrible about this programming. It's 1 am.
+			mlp.showClassifierC = showClassifier.isSelected(); //JAR mlp.showClassifier.set(showClassifier.isSelected());
+			if (mlp.showClassifierC) {
 				mlp.classifierOutput = mlp.runClassifier();
 			}
-			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifier.get());
+			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifierC);
 		});
 
 		noRelabel.setAccelerator(KeyStroke.getKeyStroke("control L"));
