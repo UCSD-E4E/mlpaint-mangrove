@@ -103,6 +103,7 @@ public class MLPaintApp extends SwingApp {
 			mlp.showClassifierC = showClassifier.isSelected(); //JAR mlp.showClassifier.set(showClassifier.isSelected());
 			if (mlp.showClassifierC) {
 				mlp.classifierOutput = mlp.runClassifier();
+				mlp.repaint();
 			}
 			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifierC);
 		});
