@@ -268,6 +268,7 @@ public class MLPaintPanel extends JComponent
 		if (!e.isControlDown() ) {
 			//MAYDO: run this in background thread if too slow
 			trainClassifier();
+			spareClassifier = null;
 			if (showClassifierC) {
 				classifierOutput = runClassifier();
 			}
