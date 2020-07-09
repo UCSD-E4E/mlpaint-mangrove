@@ -68,8 +68,8 @@ public class MLPaintApp extends SwingApp {
 		// NORTH- nothing
 		
 		// WEST
-		JButton b0 = new JButton("-");
-		JButton b1 = new JButton("+");
+		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
+		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
 		b0.addActionListener(ev -> adjustPower(-0.25));
 		b1.addActionListener(ev -> adjustPower(0.25));
 		b0.setFocusable(false);
@@ -78,13 +78,24 @@ public class MLPaintApp extends SwingApp {
 		Box controls = Box.createVerticalBox();
 		controls.add(b1);
 		controls.add(b0);
-		add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
+		//add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
 
 		// CENTER
 		mlp = new MLPaintPanel();
 		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		add(mlp, BorderLayout.CENTER);
-		
+		//add(mlp, BorderLayout.CENTER);
+
+		//Create a split pane with the two scroll panes in it.
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+				controls, mlp);
+		splitPane.setOneTouchExpandable(true);
+		splitPane.setDividerLocation(150);
+
+		//Provide minimum sizes for the two components in the split pane
+		Dimension minimumSize = new Dimension(100, 50);
+		controls.setMinimumSize(minimumSize);
+		mlp.setMinimumSize(minimumSize);
+		add(splitPane, BorderLayout.CENTER);
 		// EAST- nothing
 		
 		// SOUTH
