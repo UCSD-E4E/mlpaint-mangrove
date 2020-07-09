@@ -42,7 +42,8 @@ public class MLPaintApp extends SwingApp {
 	private MLPaintPanel mlp = null;
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
-	private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Lock accepted labels", false);
+	private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
+	//private JCheckBox noRelabel = new JCheckBox("Keep accepted labels locked.", false);
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
@@ -68,17 +69,7 @@ public class MLPaintApp extends SwingApp {
 		// NORTH- nothing
 		
 		// WEST
-		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
-		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
-		b0.addActionListener(ev -> adjustPower(-0.25));
-		b1.addActionListener(ev -> adjustPower(0.25));
-		b0.setFocusable(false);
-		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
-
-		Box controls = Box.createVerticalBox();
-		controls.add(b1);
-		controls.add(b0);
-		//add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
+		Box controls = getControlBox();
 
 		// CENTER
 		mlp = new MLPaintPanel();
@@ -89,10 +80,10 @@ public class MLPaintApp extends SwingApp {
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 				controls, mlp);
 		splitPane.setOneTouchExpandable(true);
-		splitPane.setDividerLocation(150);
+		splitPane.setDividerLocation(300);
 
 		//Provide minimum sizes for the two components in the split pane
-		Dimension minimumSize = new Dimension(100, 50);
+		Dimension minimumSize = new Dimension(200, 50);
 		controls.setMinimumSize(minimumSize);
 		mlp.setMinimumSize(minimumSize);
 		add(splitPane, BorderLayout.CENTER);
@@ -100,6 +91,79 @@ public class MLPaintApp extends SwingApp {
 		
 		// SOUTH
 		add(status, BorderLayout.SOUTH);
+	}
+
+	private Box getControlBox() {
+		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
+		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
+		b0.addActionListener(ev -> adjustPower(-0.25));
+		b1.addActionListener(ev -> adjustPower(0.25));
+		b0.setFocusable(false);
+		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
+
+		Box controls = Box.createVerticalBox();
+		//controls.add(b1);
+		//controls.add(b0);
+		//add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
+
+
+		JMenuItem enter = newMenuItem("Accept suggestion as positive| ENTER",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
+
+		JMenuItem space = newMenuItem("Accept suggestion as negative -| SPACE",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
+
+		JMenuItem ctrl0 = newMenuItem("Accept suggestion as unlabeled|control 0",
+						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
+		JMenuItem undo = newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo());
+
+		JMenuItem delete = 		newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
+		JMenuItem right = 		newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion());
+		JMenuItem left = 		newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion());
+
+		JMenuItem up = 		newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
+		JMenuItem down = 		newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+		JMenuItem digit = 		newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
+
+		controls.add(new JLabel("---Setup---"));
+		controls.add(new JLabel("    How to load image, previous labels, info layers"));
+
+		controls.add(new JSeparator());
+		controls.add(new JLabel("---Workflow---"));
+		controls.add(new JSeparator());
+
+		controls.add(new JLabel("1. Choose a region to label mangrove or non-mangrove."));
+		controls.add(new JSeparator());
+
+		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
+		controls.add(up);
+		controls.add(down);
+		controls.add(new JSeparator());
+
+		controls.add(new JLabel("3. Control the auto-selection."));
+		controls.add(right);
+		controls.add(left);
+		controls.add(new JLabel("  A. Brush on more select-paint. (drag)"));
+		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + drag)"));
+		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
+		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
+		controls.add(new JLabel("  C. Erase paint. (ALT/OPT + drag)"));
+
+		controls.add(new JSeparator());
+
+		controls.add(new JLabel("4. Deal with auto-selection."));
+		controls.add(delete);
+		controls.add(enter);
+		controls.add(space);
+
+		controls.add(new JLabel("5. Act on labels"));
+		controls.add(undo);
+		controls.add(noRelabel);
+
+
+		controls.add(new JSeparator());
+
+		return controls;
 	}
 
 	private void adjustPower(double v) {
@@ -121,10 +185,10 @@ public class MLPaintApp extends SwingApp {
 
 		noRelabel.setAccelerator(KeyStroke.getKeyStroke("control L"));
 		noRelabel.addActionListener(event -> {
-			mlp.noRelabel = (noRelabel.isSelected());
+			mlp.noRelabel = (!noRelabel.isSelected());
 			mlp.initDijkstra();
 			mlp.repaint();
-			status("Locking down labels so they cannot be changed: %s", noRelabel.isSelected());
+			status("Locking down labels so they cannot be changed: %s", !noRelabel.isSelected());
 		});
 
 	}
@@ -147,7 +211,6 @@ public class MLPaintApp extends SwingApp {
 
 		JMenu label = newMenu("Label",
 
-				noRelabel, null,
 				newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
 				newMenuItem("Accept suggestion as negative -| SPACE",
