@@ -221,6 +221,7 @@ public class SwingUtil {
 		reader.setInput(inputStream);
 
 		// # of subsampoled pixels in scanline = truncate[(width - subsamplingXOffset + sourceXSubsampling - 1) / sourceXSubsampling].
+		System.out.printf("We are setting source subsampling in x and y according to the xy.samplingEdge: %s",xy.samplingEdge);
 		imageReaderParams.setSourceSubsampling(xy.samplingEdge, xy.samplingEdge, 0, 0);
 
 		reader.addIIOReadProgressListener(progressListener);

@@ -35,6 +35,7 @@ import smile.classification.LogisticRegression;
 import smile.classification.SoftClassifier;
 
 import static org.djf.util.SwingApp.reportTime;
+import static org.djf.util.SwingApp.runBackground;
 
 //JAR import javafx.beans.property.SimpleBooleanProperty;
 
@@ -273,6 +274,7 @@ public class MLPaintPanel extends JComponent
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
+			//runBackground(() -> spareClassifierForGrowth(listQueues));
 			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 		}
 		mousePrev = null;
@@ -656,13 +658,12 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private void getRandNegatives(WritableRaster rawdata, int npos1, List<int[]> negatives) {
-		boolean checkDist = false;
-		getRandNegatives(rawdata, npos1, negatives, checkDist);
+		getRandNegatives(rawdata, npos1, negatives, -1.0);
 		return;
 	}
 
 	private void getRandNegatives(WritableRaster rawdata, int npos1,
-								 List<int[]> negatives, boolean checkDist) {
+								 List<int[]> negatives, double threshold) {  //TODO: Random negatives might if we require index==Unlabeled vs index!=nodata
 		long t = System.currentTimeMillis();
 		//thoughts: Area provides getBounds rectangle, we could choose within that or at least a few times that.
 		// if not enough negatives, add additional negatives collected randomly
@@ -671,8 +672,8 @@ public class MLPaintPanel extends JComponent
 			int x = rand.nextInt(width);
 			int y = rand.nextInt(height);
 			int index = rawdata.getSample(x, y, 0);// returns 0 or 1
-			if 	 (!checkDist && index == FRESH_UNLABELED
-				|| checkDist && index == FRESH_UNLABELED && distances[x][y] == 0) {
+			if 	 (threshold <= 0 && index == FRESH_UNLABELED
+				|| threshold > 0 && index == FRESH_UNLABELED && (distances[x][y] == 0 || distances[x][y] > threshold)) {
 				negatives.add(new int[]{x, y});
 			}
 		}
@@ -684,8 +685,9 @@ public class MLPaintPanel extends JComponent
 	/** Prepare a new classifier for if the labeler likes a suggested region and grows it.
 	 * Extract training set and train.
 	 * We're going to assume an initialized distances matrix.
-	 * Check nneg1 if extending this to apply to any but the biggest queue. */
-	public void spareClassifierForGrowth() {
+	 * Check nneg1 if extending this to apply to any but the biggest queue.
+	 * This code is run in background. */
+	public int spareClassifierForGrowth(int hi) {
 		long t = System.currentTimeMillis();
 
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
@@ -698,7 +700,7 @@ public class MLPaintPanel extends JComponent
 		int npos1 = positives.size();
 
 		if (npos1 < 100) {// not enough
-			return;// silently return
+			return 0;// silently return
 		}
 
 		//	This section is identical to trainClassifier
@@ -706,11 +708,13 @@ public class MLPaintPanel extends JComponent
 		List<int[]> negatives = sampleFreshPosNeg(rawdata, g, FRESH_NEG, maxNegatives / 2);
 		int nneg1 = negatives.size();
 
-		t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.", npos1, nneg1);
+		//t = reportTime(t, "Total time of obtaining xys for %,d positives and %,d negatives.", npos1, nneg1);
 
-		getRandNegatives(rawdata, npos1, negatives, true);
+		getRandNegatives(rawdata, npos1, negatives, thresh);
 		spareClassifier = getFvsTrainPUClassifier(positives, negatives);
 		//TODO: Ensure that runClassifier updates when proper to the correct backdrop...
+		t = reportTime(t, "Total time for spareClassifier.");
+		return 0;
 	}
 
 	private int[] getxyminxymax(Rectangle f) {
@@ -952,6 +956,9 @@ public class MLPaintPanel extends JComponent
 			// Repeat until stopping condition... for now, 2x positive training examples//MAYDO: Find shoulders in the advance
 			//		choicePoint = least getTotalDistance in queue, & delete
 			MyPoint choicePoint = queue.poll(); //Maydo: bugsafe this
+			if (choicePoint.fuelCost == Double.POSITIVE_INFINITY) {
+				break;
+			}
 			int[][] adjFour = {		{choicePoint.x,choicePoint.y+dijkstraStep}, //Maydo: 8-connectivity w/*sqrt2 penalty on diagonals
 									{choicePoint.x,choicePoint.y-dijkstraStep},
 									{choicePoint.x+dijkstraStep,choicePoint.y},
