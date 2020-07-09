@@ -94,19 +94,18 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private Box getControlBox() {
-		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
-		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
-		b0.addActionListener(ev -> adjustPower(-0.25));
-		b1.addActionListener(ev -> adjustPower(0.25));
-		b0.setFocusable(false);
-		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
-
+//		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
+//		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
+//		b0.addActionListener(ev -> adjustPower(-0.25));
+//		b1.addActionListener(ev -> adjustPower(0.25));
+//		b0.setFocusable(false);
+//		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
+//
+//		controls.add(b1);
+//		controls.add(b0);
+//		add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
+//
 		Box controls = Box.createVerticalBox();
-		//controls.add(b1);
-		//controls.add(b0);
-		//add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
-
-
 		JMenuItem enter = newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
 
@@ -166,7 +165,7 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("5. Move to the next spot."));
 		controls.add(new JLabel("     Pan (CTRL + drag)"));
 		controls.add(new JLabel("     Zoom (CTRL + scroll) <- Not Pinch!"));
-
+		controls.add(new JSeparator());
 
 		controls.add(new JLabel("---Act on labels---"));
 		controls.add(undo);
@@ -180,6 +179,7 @@ public class MLPaintApp extends SwingApp {
 	private void adjustPower(double v) {
 		mlp.scorePower += v;
 		status("Score Power = %.2f", mlp.scorePower);
+		mlp.initAutoSuggest();
 	}
 
 	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
@@ -222,22 +222,25 @@ public class MLPaintApp extends SwingApp {
 
 		JMenu label = newMenu("Label",
 
-				newMenuItem("Accept suggestion as positive| ENTER",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
-				newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
-				newMenuItem("Accept suggestion as unlabeled|control 0",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
-				null,
-				newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo()),
-				null,
-				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
-				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
-				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
-				null,
-				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),
-				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
+//				newMenuItem("Accept suggestion as positive| ENTER",
+//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
+//				newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
+//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
+//				newMenuItem("Accept suggestion as unlabeled|control 0",
+//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
+//				null,
+//				newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo()),
+//				null,
+//				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
+//				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
+//				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
+//				null,
+//				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),
+//				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
 				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5')),
+						null,
+						newMenuItem("Weight classifier more in suggestion  | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25)),
+						newMenuItem("Weight distance more in suggestion  | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25)),
 				null);
 
 

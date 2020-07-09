@@ -113,7 +113,7 @@ public class MLPaintPanel extends JComponent
 	public double scorePower = 1.5;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
-	private int dijkstraStep = 3; // For squares of 9 //This could be optimized so that if we zoom in
+	private int dijkstraStep = 5; // For squares of 9 //This could be optimized so that if we zoom in
 	//MAYDO: Optimize this to go even bigger when we're on huge scale and shrink to 1 when we are zoomed in.
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
@@ -266,20 +266,24 @@ public class MLPaintPanel extends JComponent
 		System.out.printf("MouseRelease %s\n", e.toString());
 		// if it was painting, then extract the training set
 		if (!e.isControlDown() ) {
-			//MAYDO: run this in background thread if too slow
-			trainClassifier();
-			spareClassifier = null;
-			if (showClassifierC) {
-				classifierOutput = runClassifier();
-			}
-			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
-			mousePrev = null;
-			repaint();
-			runBackground(() -> spareClassifierForGrowth( listQueues.get(listQueues.size()-1) ) );
-			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
+			initAutoSuggest();
 		}
 		mousePrev = null;
 		e.consume();
+	}
+
+	public void initAutoSuggest() {
+		//MAYDO: run this in background thread if too slow
+		trainClassifier();
+		spareClassifier = null;
+		if (showClassifierC) {
+			classifierOutput = runClassifier();
+		}
+		initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
+		mousePrev = null;
+		repaint();
+		runBackground(() -> spareClassifierForGrowth( listQueues.get(listQueues.size()-1) ) );
+		//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 	}
 
 	@Override
@@ -465,12 +469,12 @@ public class MLPaintPanel extends JComponent
 		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
 			g2.setColor(FRESH_COLORS[FRESH_POS] );
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				g2.drawRect(edgePoint.x, edgePoint.y, 3, 3);
+				g2.drawRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
 			}
 			g2.setColor(BACKDROP_COLORS[FRESH_POS]);
 			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
 				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
-				g2.fillRect(edgePoint.x, edgePoint.y, 3, 3);
+				g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
 			}
 			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
