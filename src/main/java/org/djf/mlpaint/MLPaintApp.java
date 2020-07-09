@@ -179,6 +179,7 @@ public class MLPaintApp extends SwingApp {
 	private void adjustPower(double v) {
 		mlp.scorePower += v;
 		status("Score Power = %.2f", mlp.scorePower);
+		//Re-start the suggestion
 		mlp.initAutoSuggest();
 	}
 
