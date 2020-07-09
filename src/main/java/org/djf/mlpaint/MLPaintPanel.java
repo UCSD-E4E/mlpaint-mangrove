@@ -63,8 +63,8 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0001;
-	private static final int DEFAULT_DIJKSTRA_GROWTH = 36;
-	private static final int interiorSteps = 10;
+	private static final int DEFAULT_DIJKSTRA_GROWTH = 26;
+	private static final int interiorSteps = 10; //Interior steps should be less than DEFAULT_DIJKSTRA_GROWTH
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -274,7 +274,7 @@ public class MLPaintPanel extends JComponent
 			initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 			mousePrev = null;
 			repaint();
-			//runBackground(() -> spareClassifierForGrowth(listQueues));
+			runBackground(() -> spareClassifierForGrowth( listQueues.get(listQueues.size()-1) ) );
 			//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 		}
 		mousePrev = null;
@@ -686,16 +686,15 @@ public class MLPaintPanel extends JComponent
 	 * Extract training set and train.
 	 * We're going to assume an initialized distances matrix.
 	 * Check nneg1 if extending this to apply to any but the biggest queue.
-	 * This code is run in background. */
-	public int spareClassifierForGrowth(int hi) {
+	 * This code is run in background. It accesses freshPaint, antiPaintArea, and especially distances. It could be useless if those things changed.*/
+	public int spareClassifierForGrowth(PriorityQueue<MyPoint> thisQueue) {
 		long t = System.currentTimeMillis();
 
 		WritableRaster rawdata = freshPaint.getRaster();// for direct access to the bitmap index, not its mapped color
 
 		// extract positive examples from each fresh paint pixel where distances[x][y] < thresholdIndex
-		int queueIndex = listQueues.size() - 1; // Consider the checkDist: true down at getRandNegs if you change this.
-		int[] boundsPositives = getQueueBounds(queueIndex);
-		double thresh = getThresholdDistance(queueIndex);
+		int[] boundsPositives = getQueueBounds(thisQueue);
+		double thresh = getThresholdDistance(thisQueue);
 		List<int[]> positives = sampleInSuggestion(boundsPositives, thresh, maxNegatives);
 		int npos1 = positives.size();
 
@@ -1136,6 +1135,7 @@ public class MLPaintPanel extends JComponent
 				classifier = spareClassifier;
 				System.out.println("We replaced the classifier with the spare classifier.");
 				spareClassifier = null;
+				runBackground(() -> spareClassifierForGrowth( listQueues.get(listQueues.size()-1) ) );
 				if (showClassifierC){
 					classifierOutput = runClassifier();
 				}
@@ -1189,11 +1189,18 @@ public class MLPaintPanel extends JComponent
 		return lowestPoint.fuelCost;
 	}
 
+	private double getThresholdDistance(PriorityQueue<MyPoint> thisQueue) {
+		return thisQueue.peek().fuelCost;
+	}
+
 	private int[] getCurrentQueueBounds() {
 		return getQueueBounds(queueBoundsIdx);
 	}
 	private int[] getQueueBounds(int queueIndex) {
 		PriorityQueue<MyPoint> thisQueue = listQueues.get(queueIndex);
+		return getQueueBounds(thisQueue);
+	}
+	private int[] getQueueBounds(PriorityQueue<MyPoint> thisQueue) {
 		int xmin = width-1;
 		int ymin = height-1;
 		int xmax = 0;
