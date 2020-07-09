@@ -110,7 +110,7 @@ public class MLPaintApp extends SwingApp {
 		JMenuItem enter = newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
 
-		JMenuItem space = newMenuItem("Accept suggestion as negative -| SPACE",
+		JMenuItem space = newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
 		JMenuItem ctrl0 = newMenuItem("Accept suggestion as unlabeled|control 0",
@@ -124,15 +124,21 @@ public class MLPaintApp extends SwingApp {
 		JMenuItem up = 		newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
 		JMenuItem down = 		newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
 		JMenuItem digit = 		newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
+		SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
+				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
+		SwingLink setupLink = new SwingLink("   How to load image, previous labels, info layers",
+				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
 
+		controls.add(new JSeparator());
 		controls.add(new JLabel("---Setup---"));
-		controls.add(new JLabel("    How to load image, previous labels, info layers"));
+		controls.add(setupLink);
 
 		controls.add(new JSeparator());
 		controls.add(new JLabel("---Workflow---"));
+		controls.add(workflowLink);
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("1. Choose a region to label mangrove or non-mangrove."));
+		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
@@ -155,12 +161,17 @@ public class MLPaintApp extends SwingApp {
 		controls.add(delete);
 		controls.add(enter);
 		controls.add(space);
+		controls.add(new JSeparator());
 
-		controls.add(new JLabel("5. Act on labels"));
+		controls.add(new JLabel("5. Move to the next spot."));
+		controls.add(new JLabel("     Pan (CTRL + drag)"));
+		controls.add(new JLabel("     Zoom (CTRL + scroll) <- Not Pinch!"));
+
+
+		controls.add(new JLabel("---Act on labels---"));
 		controls.add(undo);
 		controls.add(noRelabel);
-
-
+		controls.add(newMenuItem("Save labels...|control S", this::saveLabels));
 		controls.add(new JSeparator());
 
 		return controls;
@@ -213,7 +224,7 @@ public class MLPaintApp extends SwingApp {
 
 				newMenuItem("Accept suggestion as positive| ENTER",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
-				newMenuItem("Accept suggestion as negative -| SPACE",
+				newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
 				newMenuItem("Accept suggestion as unlabeled|control 0",
 						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
@@ -229,10 +240,7 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5')),
 				null);
 
-		JMenu help = new JMenu("Help—With an Intro to the MLPaint Labeling Workflow ");
-		SwingLink link = new SwingLink(" An Intro to the MLPaint Labeling Workflow ",
-				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
-		help.add(link);
+
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
 
@@ -240,7 +248,6 @@ public class MLPaintApp extends SwingApp {
 		rr.add(file);
 		rr.add(view);
 		rr.add(label);
-		rr.add(link);
 		return rr;
 	}
 
