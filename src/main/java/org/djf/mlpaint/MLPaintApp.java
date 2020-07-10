@@ -35,15 +35,47 @@ public class MLPaintApp extends SwingApp {
 
 	private Path currentImageFile;
 
-	private IIOMetadata currentImageMetadata = null;
-	private IIOMetadata currentLabelsMetadata = null;
-
 	/** magic label paint panel that holds the secret sauce */
 	private MLPaintPanel mlp = null;
 
+	private IIOMetadata currentImageMetadata = null;
+	private IIOMetadata currentLabelsMetadata = null;
+
+
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
-	private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
-	//private JCheckBox noRelabel = new JCheckBox("Keep accepted labels locked.", false);
+
+	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
+	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
+	private JCheckBox noRelabel = new JCheckBox(lock);
+
+	private ActionTracker enter = new ActionTracker("Accept suggestion as positive| ENTER",
+			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
+	private ActionTracker space = new ActionTracker("Accept suggestion as negative (SPACE)| SPACE",
+			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
+
+	private ActionTracker undo = new ActionTracker("Undo accepted label|control Z", (name, ev) -> mlp.undo());
+	private ActionTracker save = new ActionTracker("Save labels...|control S", this::saveLabels);
+
+	private ActionTracker delete = 		new ActionTracker("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
+	private ActionTracker right = 		new ActionTracker("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion());
+	private ActionTracker left = 		new ActionTracker("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion());
+
+	private ActionTracker up = 		new ActionTracker("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
+	private ActionTracker down = 		new ActionTracker("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+
+	//Less interesting abstract actions
+	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
+			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
+	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
+	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion  | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25));
+	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion  | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25));
+
+	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
+			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
+	private SwingLink setupLink = new SwingLink("   How to load image, previous labels, info layers",
+			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
+
+
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
@@ -74,7 +106,7 @@ public class MLPaintApp extends SwingApp {
 		// CENTER
 		mlp = new MLPaintPanel();
 		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		//add(mlp, BorderLayout.CENTER);
+		//add(mlp, BorderLayout.OPEN_CENTER);
 
 		//Create a split pane with the two scroll panes in it.
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
@@ -105,28 +137,8 @@ public class MLPaintApp extends SwingApp {
 //		controls.add(b0);
 //		add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
 //
+
 		Box controls = Box.createVerticalBox();
-		JMenuItem enter = newMenuItem("Accept suggestion as positive| ENTER",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-
-		JMenuItem space = newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
-
-		JMenuItem ctrl0 = newMenuItem("Accept suggestion as unlabeled|control 0",
-						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
-		JMenuItem undo = newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo());
-
-		JMenuItem delete = 		newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
-		JMenuItem right = 		newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion());
-		JMenuItem left = 		newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion());
-
-		JMenuItem up = 		newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
-		JMenuItem down = 		newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
-		JMenuItem digit = 		newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
-		SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
-				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
-		SwingLink setupLink = new SwingLink("   How to load image, previous labels, info layers",
-				"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
 
 		controls.add(new JSeparator());
 		controls.add(new JLabel("---Setup---"));
@@ -141,13 +153,13 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
-		controls.add(up);
-		controls.add(down);
+		up.addTo(controls);
+		down.addTo(controls);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("3. Control the auto-selection."));
-		controls.add(right);
-		controls.add(left);
+		right.addTo(controls);
+		left.addTo(controls);
 		controls.add(new JLabel("  A. Brush on more select-paint. (drag)"));
 		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + drag)"));
 		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
@@ -157,9 +169,10 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("4. Deal with auto-selection."));
-		controls.add(delete);
-		controls.add(enter);
-		controls.add(space);
+		delete.addTo(controls);
+
+		enter.addTo(controls);
+		space.addTo(controls);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("5. Move to the next spot."));
@@ -168,9 +181,10 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("---Act on labels---"));
-		controls.add(undo);
+		undo.addTo(controls);
 		controls.add(noRelabel);
-		controls.add(newMenuItem("Save labels...|control S", this::saveLabels));
+		controls.add(noRelabel);
+		save.addTo(controls);
 		controls.add(new JSeparator());
 
 		return controls;
@@ -178,9 +192,9 @@ public class MLPaintApp extends SwingApp {
 
 	private void adjustPower(double v) {
 		mlp.scorePower += v;
-		status("Score Power = %.2f", mlp.scorePower);
 		//Re-start the suggestion
 		mlp.initAutoSuggest();
+		status("Score Power = %.2f", mlp.scorePower);
 	}
 
 	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
@@ -195,14 +209,13 @@ public class MLPaintApp extends SwingApp {
 			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifierC);
 		});
 
-		noRelabel.setAccelerator(KeyStroke.getKeyStroke("control L"));
-		noRelabel.addActionListener(event -> {
-			mlp.noRelabel = (!noRelabel.isSelected());
-			mlp.initDijkstra();
-			mlp.repaint();
-			status("Locking down labels so they cannot be changed: %s", !noRelabel.isSelected());
-		});
+	}
 
+	private void lockLabels() {
+		mlp.noRelabel = (noRelabel.isSelected());
+		mlp.initDijkstra();
+		mlp.repaint();
+		status("Locking down labels so they cannot be changed: %s", noRelabel.isSelected());
 	}
 
 	/** Make the menus, with associated actions and often keyboard shortcuts.
@@ -211,7 +224,7 @@ public class MLPaintApp extends SwingApp {
 	private JMenuBar makeMenus() {				 						//MAYDO: Allow ctrl and command, maybe ever same
 		JMenu file = newMenu("File",
 				newMenuItem("Open image, labels...|control O", this::openImage),
-				newMenuItem("Save labels...|control S", this::saveLabels),
+				save.menuItem,
 				newMenuItem("Exit", this::exit),
 				null);
 
@@ -222,26 +235,12 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
-
-//				newMenuItem("Accept suggestion as positive| ENTER",
-//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)), //MAYDO: UI key choice
-//				newMenuItem("Accept suggestion as negative (SPACE)| SPACE",
-//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE)),
-//				newMenuItem("Accept suggestion as unlabeled|control 0",
-//						(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED)),
-//				null,
-//				newMenuItem("Undo accepted label|control Z", (name, ev) -> mlp.undo()),
-//				null,
-//				newMenuItem("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint()),
-//				newMenuItem("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion()),
-//				newMenuItem("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion()),
-//				null,
-//				newMenuItem("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5)),
-//				newMenuItem("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5)),
-				newMenuItem("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5')),
+				digit.menuItem,
 						null,
-						newMenuItem("Weight classifier more in suggestion  | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25)),
-						newMenuItem("Weight distance more in suggestion  | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25)),
+						plus.menuItem,
+						minus.menuItem,
+						null,
+						ctrl0.menuItem,
 				null);
 
 

@@ -123,11 +123,21 @@ public class SwingApp extends JFrame {
 		return rr;
 	}
 
+	/** Make a JButton with focusable set false. */
+	public static JButton nonFocusJB(AbstractAction action) {
+		JButton jb = new JButton(action);
+		jb.setFocusable(false);
+		return jb;
+	}
+
 	/** new menu item for named command */
 	public static JMenuItem newMenuItem(String command, ActionListener2 action) {
 		return new JMenuItem(newAction(command, action));
 	}
-
+	/** new menu item for Abstract Action */
+	public static JMenuItem newMenuItem(AbstractAction action) {
+		return new JMenuItem(action);
+	}
 	
 	/** new named menu item, with the provided action function
 	 * If command string ends with "|alt D" establish keyboard shortcut.

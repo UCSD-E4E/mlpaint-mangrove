@@ -718,6 +718,7 @@ public class MLPaintPanel extends JComponent
 		spareClassifier = getFvsTrainPUClassifier(positives, negatives);
 		//TODO: Ensure that runClassifier updates when proper to the correct backdrop...
 		t = reportTime(t, "Total time for spareClassifier.");
+		t = reportTime(t, "Operating under %.2f scorePower", scorePower);
 		return 0;
 	}
 
@@ -1131,6 +1132,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 	public void growSuggestion() {
+		System.out.println("Grow suggestion was called.\n");
 		if (queueBoundsIdx < 0) return;
 		queueBoundsIdx += 1;
 		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
