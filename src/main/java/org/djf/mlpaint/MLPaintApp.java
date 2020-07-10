@@ -139,6 +139,7 @@ public class MLPaintApp extends SwingApp {
 //
 
 		Box controls = Box.createVerticalBox();
+		controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
 		controls.add(new JSeparator());
 		controls.add(new JLabel("---Setup---"));
