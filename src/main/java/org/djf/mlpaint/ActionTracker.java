@@ -39,6 +39,7 @@ public class ActionTracker {
 
 		JButton button = new JButton( text );
 		button.addActionListener( this.action);
+		button.setFocusable(false);
 		//button.setBorder( new LineBorder(Color.BLACK) );
 		//button.setPreferredSize( new Dimension(250, 10) );
 		controls.add( button );
