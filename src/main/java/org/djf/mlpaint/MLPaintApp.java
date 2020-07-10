@@ -154,13 +154,13 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
-		up.addTo(controls);
-		down.addTo(controls);
+		up.addAsButton(controls);
+		down.addAsButton(controls);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("3. Control the auto-selection."));
-		right.addTo(controls);
-		left.addTo(controls);
+		right.addAsButton(controls);
+		left.addAsButton(controls);
 		controls.add(new JLabel("  A. Brush on more select-paint. (drag)"));
 		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + drag)"));
 		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
@@ -170,10 +170,10 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("4. Deal with auto-selection."));
-		delete.addTo(controls);
+		delete.addAsButton(controls);
 
-		enter.addTo(controls);
-		space.addTo(controls);
+		enter.addAsButton(controls);
+		space.addAsButton(controls);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("5. Move to the next spot."));
@@ -182,10 +182,9 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("---Act on labels---"));
-		undo.addTo(controls);
+		undo.addAsButton(controls);
 		controls.add(noRelabel);
-		controls.add(noRelabel);
-		save.addTo(controls);
+		save.addAsButton(controls);
 		controls.add(new JSeparator());
 
 		return controls;
@@ -242,6 +241,12 @@ public class MLPaintApp extends SwingApp {
 						minus.menuItem,
 						null,
 						ctrl0.menuItem,
+						null,
+						right.menuItem,
+						left.menuItem,
+						null,
+						up.menuItem,
+						down.menuItem,
 				null);
 
 
