@@ -48,31 +48,31 @@ public class MLPaintApp extends SwingApp {
 	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private ActionTracker enter = new ActionTracker("Accept suggestion as positive| ENTER",
+	private ActionTracker enter = new ActionTracker("Accept suggestion as positive (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-	private ActionTracker space = new ActionTracker("Accept suggestion as negative (SPACE)| SPACE",
+	private ActionTracker space = new ActionTracker("Accept suggestion as negative (Space)| SPACE",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
-	private ActionTracker undo = new ActionTracker("Undo accepted label|control Z", (name, ev) -> mlp.undo());
-	private ActionTracker save = new ActionTracker("Save labels...|control S", this::saveLabels);
+	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
+	private ActionTracker save = new ActionTracker("Save labels... (Ctrl-S)|control S", this::saveLabels);
 
-	private ActionTracker delete = 		new ActionTracker("Clear suggestion|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
-	private ActionTracker right = 		new ActionTracker("Grow suggestion|RIGHT", (name,ev) -> mlp.growSuggestion());
-	private ActionTracker left = 		new ActionTracker("Shrink suggestion|LEFT", (name,ev) -> mlp.shrinkSuggestion());
+	private ActionTracker delete = 		new ActionTracker("Clear suggestion (Backspace)|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
+	private ActionTracker right = 		new ActionTracker("Grow suggestion (Period)|PERIOD", (name,ev) -> mlp.growSuggestion());
+	private ActionTracker left = 		new ActionTracker("Shrink suggestion (Comma)|COMMA", (name,ev) -> mlp.shrinkSuggestion());
 
-	private ActionTracker up = 		new ActionTracker("Bigger brush|UP",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
-	private ActionTracker down = 		new ActionTracker("Smaller brush|DOWN", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+	private ActionTracker up = 		new ActionTracker("Bigger brush (Semi-colon)|SEMICOLON",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
+	private ActionTracker down = 		new ActionTracker("Smaller brush (L)|L", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
 
 	//Less interesting abstract actions
 	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
 	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
-	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion  | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25));
-	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion  | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25));
+	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25));
+	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25));
 
 	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
-	private SwingLink setupLink = new SwingLink("   How to load image, previous labels, info layers",
+	private SwingLink setupLink = new SwingLink("   Loading image, previous labels, info layers",
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
 
 
@@ -142,11 +142,11 @@ public class MLPaintApp extends SwingApp {
 		controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
 		controls.add(new JSeparator());
-		controls.add(new JLabel("---Setup---"));
+		controls.add(new JLabel("Setup:"));
 		controls.add(setupLink);
 
 		controls.add(new JSeparator());
-		controls.add(new JLabel("---Workflow---"));
+		controls.add(new JLabel("Workflow:"));
 		controls.add(workflowLink);
 		controls.add(new JSeparator());
 
@@ -181,9 +181,9 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("     Zoom (CTRL + scroll) <- Not Pinch!"));
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("---Act on labels---"));
+		controls.add(new JLabel("Act on labels:"));
 		undo.addAsButton(controls);
-		controls.add(noRelabel);
+		//controls.add(noRelabel);
 		save.addAsButton(controls);
 		controls.add(new JSeparator());
 
