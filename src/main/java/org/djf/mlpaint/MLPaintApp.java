@@ -183,7 +183,7 @@ public class MLPaintApp extends SwingApp {
 
 		controls.add(new JLabel("Act on labels:"));
 		undo.addAsButton(controls);
-		//controls.add(noRelabel);
+		controls.add(noRelabel);
 		save.addAsButton(controls);
 		controls.add(new JSeparator());
 

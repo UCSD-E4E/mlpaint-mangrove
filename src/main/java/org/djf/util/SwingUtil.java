@@ -32,8 +32,8 @@ public class SwingUtil {
 	public static final Color ALPHAGREEN = new Color(0,1,0,.2f);
 	public static final Color ALPHABLUE  = new Color(0,0,1,.2f);
 	public static final Color ALPHAYELLOW = new Color(1, 1, 0, .2f);
-	public static final Color ALPHAGRAY = new Color(0, 0, 0, .5f);
-	public static final Color ALPHABLACK = new Color(0, 0, 0, .7f);
+	public static final Color ALPHAGRAY = new Color(0, 0, 0, .3f);
+	public static final Color ALPHABLACK = new Color(0, 0, 0, .5f);
 	public static final Color SKYBLUE = new Color(41,204, 255);
 	public static final Color SKYRED = new Color(255, 119, 54);
 	public static final Color BACKGROUND_GRAY = new Color(238,238,238);
