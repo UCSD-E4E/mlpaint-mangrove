@@ -57,18 +57,18 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker save = new ActionTracker("Save labels... (Ctrl-S)|control S", this::saveLabels);
 
 	private ActionTracker delete = 		new ActionTracker("Clear suggestion (Backspace)|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
-	private ActionTracker right = 		new ActionTracker("Grow suggestion (Period)|PERIOD", (name,ev) -> mlp.growSuggestion());
-	private ActionTracker left = 		new ActionTracker("Shrink suggestion (Comma)|COMMA", (name,ev) -> mlp.shrinkSuggestion());
+	private ActionTracker right = 		new ActionTracker("Grow suggestion (x)|X", (name,ev) -> mlp.growSuggestion());
+	private ActionTracker left = 		new ActionTracker("Shrink suggestion (z)|Z", (name,ev) -> mlp.shrinkSuggestion());
 
-	private ActionTracker up = 		new ActionTracker("Bigger brush (Semi-colon)|SEMICOLON",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
-	private ActionTracker down = 		new ActionTracker("Smaller brush (L)|L", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+	private ActionTracker up = 		new ActionTracker("Bigger brush (s)|S",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
+	private ActionTracker down = 		new ActionTracker("Smaller brush (a)|A", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
 
 	//Less interesting abstract actions
 	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
 	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
-	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion | CLOSE_BRACKET", (name,ev) -> adjustPower(+0.25));
-	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | OPEN_BRACKET", (name, ev) -> adjustPower(-0.25));
+	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion | W", (name,ev) -> adjustPower(+0.25));
+	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | Q", (name, ev) -> adjustPower(-0.25));
 
 	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
