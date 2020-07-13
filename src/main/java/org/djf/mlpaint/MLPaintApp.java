@@ -48,9 +48,9 @@ public class MLPaintApp extends SwingApp {
 	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private ActionTracker enter = new ActionTracker("Accept suggestion as positive (Enter)| ENTER",
+	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-	private ActionTracker space = new ActionTracker("Accept suggestion as negative (Space)| SPACE",
+	private ActionTracker space = new ActionTracker("Accept suggestion as non-mangrove (Space)| SPACE",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
