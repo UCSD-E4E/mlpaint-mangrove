@@ -46,7 +46,12 @@ public class MLPaintApp extends SwingApp {
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
 	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
+	private AbstractAction lockFromBox = newAction("N/A", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
+
+	private AbstractAction penMode = newAction("Set to nearly-pen mode", (name,ev) -> makePenMode());
+	private AbstractAction penModeFromBox = newAction("N/A number two, different", (name,ev) -> makePenModeFromControlBox());
+	private JCheckBox isPenMode = new JCheckBox(penMode);
 
 	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
@@ -166,6 +171,8 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
 		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
 		controls.add(new JLabel("  C. Erase paint. (ALT/OPT + drag)"));
+		controls.add(isPenMode);
+		SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
 
 		controls.add(new JSeparator());
 
@@ -184,6 +191,7 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("Act on labels:"));
 		undo.addAsButton(controls);
 		controls.add(noRelabel);
+		SwingUtil.putActionIntoBox(controls, "lockFromBoxCode", lockFromBox);
 		save.addAsButton(controls);
 		controls.add(new JSeparator());
 
@@ -216,6 +224,28 @@ public class MLPaintApp extends SwingApp {
 		mlp.initDijkstra();
 		mlp.repaint();
 		status("Locking down labels so they cannot be changed: %s", noRelabel.isSelected());
+	}
+
+	private void lockLabelsFromControlBox() {
+		noRelabel.setSelected(!noRelabel.isSelected());
+		lockLabels();
+	}
+
+	private void makePenMode() {
+		if (isPenMode.isSelected() == true) {
+			mlp.dijkstraGrowth = mlp.INTERIOR_STEPS;
+			mlp.queueBoundsIdx = mlp.INTERIOR_STEPS;
+		} else {
+			mlp.dijkstraGrowth =  mlp.DEFAULT_DIJSKTRA_GROWTH;
+			mlp.queueBoundsIdx = mlp.DEFAULT_DIJSKTRA_GROWTH;
+		}
+		mlp.initDijkstra();
+		mlp.repaint();
+	}
+
+	private void makePenModeFromControlBox() {
+		isPenMode.setSelected(!isPenMode.isSelected());
+		makePenMode();
 	}
 
 	/** Make the menus, with associated actions and often keyboard shortcuts.

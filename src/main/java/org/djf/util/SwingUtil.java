@@ -16,6 +16,7 @@ import javax.imageio.event.IIOReadProgressListener;
 import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.plugins.tiff.TIFFDirectory;
 import javax.imageio.stream.ImageInputStream;
+import javax.swing.*;
 
 import com.google.common.base.Preconditions;
 import org.checkerframework.checker.units.qual.C;
@@ -310,4 +311,10 @@ public class SwingUtil {
 		return new BufferedImage(cm, raster, isAlphaPremultiplied, null).getSubimage(0, 0, bi.getWidth(), bi.getHeight());
 	}
 
+	/** Put an action onto a Box */
+	public static void putActionIntoBox(Box controls, String textKey, AbstractAction roar) {
+		InputMap inputMap = controls.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
+		controls.getActionMap().put(textKey, roar);
+	}
 }

@@ -1,6 +1,7 @@
 package org.djf.mlpaint;
 
 import org.djf.util.SwingApp;
+import org.djf.util.SwingUtil;
 import org.djf.util.Utils;
 import javax.swing.*;
 import java.awt.*;
@@ -44,9 +45,7 @@ public class ActionTracker {
 		//button.setPreferredSize( new Dimension(250, 10) );
 		controls.add( button );
 
-		InputMap inputMap = controls.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-		inputMap.put(KeyStroke.getKeyStroke(keyStroke), keyStroke);
-		controls.getActionMap().put(keyStroke, this.action);
+		SwingUtil.putActionIntoBox(controls, keyStroke, this.action);
 	}
 
 	/** Add a JCheckBox with key-trigger to a Box.

@@ -11,19 +11,15 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
-import java.nio.Buffer;
 import java.util.*;
 import java.util.List;
 import java.util.stream.IntStream;
 
 import javax.swing.JComponent;
 
-import com.google.common.math.Stats;
 import com.google.common.math.StatsAccumulator;
-import org.bytedeco.javacpp.annotation.Index;
 import org.djf.util.SwingUtil;
 
 import com.google.common.base.Preconditions;
@@ -63,8 +59,9 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.0001;
-	private static final int DEFAULT_DIJKSTRA_GROWTH = 26;
-	private static final int interiorSteps = 10; //Interior steps should be less than DEFAULT_DIJKSTRA_GROWTH
+	public static final int DEFAULT_DIJSKTRA_GROWTH = 26;
+	public static final int INTERIOR_STEPS = 10; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
+	public static int dijkstraGrowth = DEFAULT_DIJSKTRA_GROWTH;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
 	public BufferedImage image;
@@ -203,7 +200,7 @@ public class MLPaintPanel extends JComponent
 		freshPaint = SwingUtil.newBinaryImage(width, height, FRESH_COLORS);// 2 bits per pixel
 		t = reportTime(t, "We have made a new freshpaint image.");
 		listQueues = null;
-		queueBoundsIdx = DEFAULT_DIJKSTRA_GROWTH;
+		queueBoundsIdx = dijkstraGrowth;
 		freshPaintArea = new Area();
 		antiPaintArea = new Area();
 		dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
@@ -935,14 +932,14 @@ public class MLPaintPanel extends JComponent
 			return;
 		}
 
-		double repsIncrementAbs = (double) (freshPaintNumPositives / (double) interiorSteps);
+		double repsIncrementAbs = (double) (freshPaintNumPositives / (double) INTERIOR_STEPS);
 		int repsIncrement = (int) (repsIncrementAbs / (dijkstraStep*dijkstraStep) );
 		t = reportTime(t, "");
-		for (int i=0; i < interiorSteps; i++) {
+		for (int i = 0; i < INTERIOR_STEPS; i++) {
 			growDijkstra(repsIncrement);
 		}
-		for (int i=interiorSteps; i<queueBoundsIdx; i++) {
-			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,i-interiorSteps)*0.02);
+		for (int i = INTERIOR_STEPS; i<queueBoundsIdx; i++) {
+			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,i- INTERIOR_STEPS)*0.02);
 			growDijkstra(repsIncrement);
 		}
 		t = reportTime(t, "Initialized Dijkstra with 20 growDijkstras.");
@@ -1148,7 +1145,7 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 
-			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1-interiorSteps)*0.02);
+			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1- INTERIOR_STEPS)*0.02);
 			growDijkstra(repsIncrement);
 		}
 		repaint();
