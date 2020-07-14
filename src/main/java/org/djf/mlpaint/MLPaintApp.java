@@ -2,6 +2,9 @@ package org.djf.mlpaint;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -45,12 +48,12 @@ public class MLPaintApp extends SwingApp {
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
-	private AbstractAction lock = newAction("Lock accepted labels against change (Ctrl-L)|control L", (name,ev) -> lockLabels());
-	private AbstractAction lockFromBox = newAction("N/A", (name,ev) -> lockLabelsFromControlBox());
+	private AbstractAction lock = newAction("Lock accepted labels against change (Ctrl-L)", (name,ev) -> lockLabels());
+	private AbstractAction lockFromBox = newAction("Lock accepted labels against change (Ctrl-L|control L", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private AbstractAction penMode = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenMode());
-	private AbstractAction penModeFromBox = newAction("N/A number two, different", (name,ev) -> makePenModeFromControlBox());
+	private AbstractAction penMode = newAction("Set to nearly-pen mode (Ctrl-P)", (name,ev) -> makePenMode());
+	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
 	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
@@ -62,11 +65,11 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker save = new ActionTracker("Save labels... (Ctrl-S)|control S", this::saveLabels);
 
 	private ActionTracker delete = 		new ActionTracker("Clear suggestion (Backspace)|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
-	private ActionTracker right = 		new ActionTracker("Grow suggestion (x)|X", (name,ev) -> mlp.growSuggestion());
-	private ActionTracker left = 		new ActionTracker("Shrink suggestion (z)|Z", (name,ev) -> mlp.shrinkSuggestion());
+	private ActionTracker right = 		new ActionTracker("Grow suggestion (X)|X", (name,ev) -> mlp.growSuggestion());
+	private ActionTracker left = 		new ActionTracker("Shrink suggestion (Z)|Z", (name,ev) -> mlp.shrinkSuggestion());
 
-	private ActionTracker up = 		new ActionTracker("Bigger brush (s)|S",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
-	private ActionTracker down = 		new ActionTracker("Smaller brush (a)|A", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
+	private ActionTracker down = 		new ActionTracker("Smaller brush (A)|A", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
 
 	//Less interesting abstract actions
 	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
@@ -172,7 +175,17 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
 		controls.add(new JLabel("  C. Erase paint. (ALT/OPT + drag)"));
 		controls.add(isPenMode);
-		SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
+		//SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
+
+//		final JCheckBox checkBox5 = new JCheckBox("Racing");
+//		checkBox5.setMnemonic(KeyEvent.VK_P);
+//		checkBox5.addItemListener(new ItemListener() {
+//			public void itemStateChanged(ItemEvent e) {
+//				System.out.println("WE are calling somethin.");
+//				makePenMode();
+//			}
+//		});
+//		controls.add(checkBox5);
 
 		controls.add(new JSeparator());
 
@@ -190,8 +203,9 @@ public class MLPaintApp extends SwingApp {
 
 		controls.add(new JLabel("Act on labels:"));
 		undo.addAsButton(controls);
+		noRelabel.setMnemonic(KeyEvent.VK_C);
 		controls.add(noRelabel);
-		SwingUtil.putActionIntoBox(controls, "lockFromBoxCode", lockFromBox);
+		//SwingUtil.putActionIntoBox(controls, "lockFromBoxCode", lockFromBox);
 		save.addAsButton(controls);
 		controls.add(new JSeparator());
 
@@ -232,6 +246,7 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private void makePenMode() {
+		System.out.println("Turning on or off the pen mode.");
 		if (isPenMode.isSelected() == true) {
 			mlp.dijkstraGrowth = mlp.INTERIOR_STEPS;
 			mlp.queueBoundsIdx = mlp.INTERIOR_STEPS;

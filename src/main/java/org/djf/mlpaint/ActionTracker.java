@@ -59,10 +59,6 @@ public class ActionTracker {
 		//button.setBorder( new LineBorder(Color.BLACK) );
 		//button.setPreferredSize( new Dimension(250, 10) );
 		controls.add( checkBox );
-
-		InputMap inputMap = controls.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-		inputMap.put(KeyStroke.getKeyStroke(keyStroke), keyStroke);
-		controls.getActionMap().put(keyStroke, this.action);
 	}
 
 
