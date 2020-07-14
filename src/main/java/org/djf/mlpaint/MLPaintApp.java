@@ -45,11 +45,11 @@ public class MLPaintApp extends SwingApp {
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
-	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
+	private AbstractAction lock = newAction("Lock accepted labels against change (Ctrl-L)|control L", (name,ev) -> lockLabels());
 	private AbstractAction lockFromBox = newAction("N/A", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private AbstractAction penMode = newAction("Set to nearly-pen mode", (name,ev) -> makePenMode());
+	private AbstractAction penMode = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenMode());
 	private AbstractAction penModeFromBox = newAction("N/A number two, different", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
