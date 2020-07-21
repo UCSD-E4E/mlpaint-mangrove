@@ -83,6 +83,7 @@ public class MLPaintPanel extends JComponent
 	private boolean undoInProgress = false;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
+	public boolean safeToSave = true;
 
 	/** binary image mask.  pixel index = FRESH_POS where the user has freshly painted positive.
 	 * Colors for display are transparent & transparent-green, currently.
@@ -1169,6 +1170,7 @@ public class MLPaintPanel extends JComponent
 
 
 	public void writeSuggestionToLabels(int labelIndex) { //Maydo: add edges
+		safeToSave = false;
 		long t = System.currentTimeMillis();
 		System.out.println("writeSuggestionToLabels called \n");
 		if (listQueues == null || distances == null || labels == null || queueBoundsIdx < 0) {

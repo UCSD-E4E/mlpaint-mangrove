@@ -1,10 +1,7 @@
 package org.djf.mlpaint;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -87,7 +84,7 @@ public class MLPaintApp extends SwingApp {
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
-		setTitle("ML Paint, version 2020.07.09beta");// update version number periodically   //Superclass somewhere above swingApp
+		setTitle("ML Paint, version 2020.07.21 Beta Internal Release");// update version number periodically   //Superclass somewhere above swingApp
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
 		makeContent();												// MLPaintApp method
 		makeBehavior();												// MLPaintApp method
@@ -270,7 +267,7 @@ public class MLPaintApp extends SwingApp {
 		JMenu file = newMenu("File",
 				newMenuItem("Open image, labels...|control O", this::openImage),
 				save.menuItem,
-				newMenuItem("Exit", this::exit),
+				newMenuItem("Save and Exit", this::exit),
 				null);
 
 		JMenu view = newMenu("View",
@@ -395,6 +392,9 @@ public class MLPaintApp extends SwingApp {
 	}
 
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
+		saveLabels();
+	}
+	private void saveLabels() throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
 		// For now: compressed TIFF is good
 		String extension = ".tif"; //".tif"".png";
@@ -407,14 +407,20 @@ public class MLPaintApp extends SwingApp {
 		BufferedImage labelsToScale = SwingUtil.upsampleImage0Channel(mlp.labels, xy.bigDim, xy.samplingEdge);
 		boolean a = ImageIO.write(labelsToScale, formatName, outfile.toFile());
 		status("Saved %d x %d labels to %s, with message %s", labelsToScale.getWidth(), labelsToScale.getHeight(), outfile, a);
+		mlp.safeToSave = true;
 		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
 	}
 
 	private void exit(String command, ActionEvent ev) {
 		//TODO: if latest changes not saved
 		// JOptionDialog "Do you want to save your labels first?
-		// save or just quit
-		status("TODO %s\n", command);
+		// save and quit
+		try {
+			this.saveLabels();
+		} catch (IOException e) {
+			return;
+		}
+		this.dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
 	}
 
 	private void  label(String command, ActionEvent ev) {
