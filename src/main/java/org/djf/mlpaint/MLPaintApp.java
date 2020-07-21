@@ -76,9 +76,9 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | Q", (name, ev) -> adjustPower(-0.25));
 
 	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
-			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
-	private SwingLink setupLink = new SwingLink("   Loading image, previous labels, info layers",
-			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/");
+			"https://www.youtube.com/watch?v=m0N1C22AFdc");
+	private SwingLink setupLink = new SwingLink("   Loading image, previous labels",
+			"https://www.youtube.com/watch?v=ynDJ86NST30&feature=youtu.be");
 
 
 	/*main passes this function into the EDT TODO: check that*/
