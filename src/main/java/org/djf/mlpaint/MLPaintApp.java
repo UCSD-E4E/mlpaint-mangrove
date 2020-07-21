@@ -58,7 +58,7 @@ public class MLPaintApp extends SwingApp {
 
 	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-	private ActionTracker space = new ActionTracker("Accept suggestion as non-mangrove (Space)| SPACE",
+	private ActionTracker space = new ActionTracker("Accept suggestion as non-m... (Space)| SPACE",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
@@ -158,7 +158,7 @@ public class MLPaintApp extends SwingApp {
 		controls.add(workflowLink);
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
+		controls.add(new JLabel("1. Choose a mangrove or else non-mangrove region to label."));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
@@ -282,9 +282,6 @@ public class MLPaintApp extends SwingApp {
 		JMenu label = newMenu("Label",
 				digit.menuItem,
 						null,
-						plus.menuItem,
-						minus.menuItem,
-						null,
 						ctrl0.menuItem,
 						null,
 						right.menuItem,
@@ -292,6 +289,9 @@ public class MLPaintApp extends SwingApp {
 						null,
 						up.menuItem,
 						down.menuItem,
+						null,
+						plus.menuItem,
+						minus.menuItem,
 				null);
 
 

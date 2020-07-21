@@ -79,7 +79,7 @@ public class MLPaintPanel extends JComponent
 	private BufferedImage visLabels;
 	/** clients can toggle this property and we automatically re-initDijkstra */
 	public boolean noRelabel = true;
-	private static final int UNDO_MEM = 10;
+	private static final int UNDO_MEM = 20;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
 
@@ -1228,7 +1228,7 @@ public class MLPaintPanel extends JComponent
 		return bounds;
 	}
 
-	/** Return a new image with hatchings on it from the labels   */
+	/** Return a mostly transparent image with hatchings on it from the labels   */
 	private BufferedImage getDisplayLabels(BufferedImage myLabels) {
 		long t = System.currentTimeMillis();
 
@@ -1253,14 +1253,14 @@ public class MLPaintPanel extends JComponent
 	}
 
 	private void visLabelPointPosNegData(WritableRaster displayRast, int i, int j, int PosNegUnCode) {
-		if (PosNegUnCode != POSITIVE && PosNegUnCode != NEGATIVE && PosNegUnCode != NO_DATA) {
+		if (PosNegUnCode != POSITIVE && PosNegUnCode != NEGATIVE && PosNegUnCode != NO_DATA && PosNegUnCode != UNLABELED) {
 			//System.out.println("This is probably an error. \n" +
 			//		"You may have called visLabelPointPosNegData for unlabeled.");
 			return;
 		}
 
 		int diagonalSize = 9;
-		int bigDiagSize = 120;
+		int bigDiagSize = 160;
 
 		//Make negatives black diagonals
 		int sRad = 0;
@@ -1305,6 +1305,8 @@ public class MLPaintPanel extends JComponent
 			//Fill No Data
 		} else if (PosNegUnCode == NO_DATA) {
 			displayRast.setSample(i,j,0, NO_DATA);
+		} else if (PosNegUnCode == UNLABELED) {
+			displayRast.setSample(i,j,0, UNLABELED);
 		}
 	}
 
