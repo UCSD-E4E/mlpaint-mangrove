@@ -48,12 +48,12 @@ public class MLPaintApp extends SwingApp {
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
-	private AbstractAction lock = newAction("Lock accepted labels against change (Ctrl-L)", (name,ev) -> lockLabels());
+	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
 	private AbstractAction lockFromBox = newAction("Lock accepted labels against change (Ctrl-L|control L", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private AbstractAction penMode = newAction("Set to nearly-pen mode (Ctrl-P)", (name,ev) -> makePenMode());
-	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P|control P", (name,ev) -> makePenModeFromControlBox());
+	private AbstractAction penMode = newAction("Set to nearly-pen mode", (name,ev) -> makePenMode());
+	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
 	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
@@ -169,11 +169,11 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("3. Control the auto-selection."));
 		right.addAsButton(controls);
 		left.addAsButton(controls);
-		controls.add(new JLabel("  A. Brush on more select-paint. (drag)"));
-		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + drag)"));
+		controls.add(new JLabel("  A. Brush on more select-paint. (click-and-drag)"));
+		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + click-and-drag)"));
 		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
 		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
-		controls.add(new JLabel("  C. Erase paint. (ALT/OPT + drag)"));
+		controls.add(new JLabel("  C. Erase paint. (Alt/Option + click-and-drag)"));
 		controls.add(isPenMode);
 		//SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
 

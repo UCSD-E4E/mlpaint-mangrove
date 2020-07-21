@@ -80,6 +80,7 @@ public class MLPaintPanel extends JComponent
 	/** clients can toggle this property and we automatically re-initDijkstra */
 	public boolean noRelabel = true;
 	private static final int UNDO_MEM = 20;
+	private boolean undoInProgress = false;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
 
@@ -498,6 +499,10 @@ public class MLPaintPanel extends JComponent
 			crossHatchArea(g2, antiPaintArea, FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 		}
 		t = reportTime(t, "cross hatched fresh paint drawn");
+
+		if (undoInProgress) {
+			undoInProgress = false;
+		}
 		g2.dispose();
 	}
 
@@ -1322,7 +1327,10 @@ public class MLPaintPanel extends JComponent
 		if (undoLabels.size() < 1 ) {
 			System.out.println("There is not more history saved to undo.");
 			return;
+		} else if (undoInProgress) {
+			return;
 		}
+		undoInProgress = true;
 		labels = undoLabels.get(undoLabels.size() -1);
 		undoLabels.remove(undoLabels.size()-1);
 		initializeFreshPaint();
