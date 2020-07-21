@@ -98,6 +98,7 @@ public class MLPaintPanel extends JComponent
 
 	private SoftClassifier<double[]> classifier;
 	private SoftClassifier<double[]> spareClassifier;
+	private boolean allowSpareClassifier = false;
 	private final int maxPositives = 4000;
 	private final int maxNegatives = 8000;
 	private boolean isPULearning = true;
@@ -108,7 +109,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	private float[][] distances;
 	private float[][] spareDistances = null; //= new double[width][height];
-	public double scorePower = 1.5;
+	public double scorePower = 3.0;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
 	private int dijkstraStep = 5; // For squares of 9 //This could be optimized so that if we zoom in
@@ -280,7 +281,9 @@ public class MLPaintPanel extends JComponent
 		initDijkstra(); //MAYDO: rename makeSuggestions---dijkstra is just one way to do that
 		mousePrev = null;
 		repaint();
-		runBackground(() -> spareClassifierForGrowth( listQueues.get(listQueues.size()-1) ) );
+		if (allowSpareClassifier) {
+			runBackground(() -> spareClassifierForGrowth(listQueues.get(listQueues.size() - 1)));
+		}
 		//spareClassifierForGrowth(); //TODO: Help? I need to run this after repaint.
 	}
 
