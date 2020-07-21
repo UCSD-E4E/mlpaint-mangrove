@@ -98,7 +98,7 @@ public class MLPaintPanel extends JComponent
 
 	private SoftClassifier<double[]> classifier;
 	private SoftClassifier<double[]> spareClassifier;
-	private boolean allowSpareClassifier = false;
+	private final boolean allowSpareClassifier = false;
 	private final int maxPositives = 4000;
 	private final int maxNegatives = 8000;
 	private boolean isPULearning = true;
@@ -436,7 +436,7 @@ public class MLPaintPanel extends JComponent
 	@Override
 	protected void paintComponent(Graphics g) {
 
-		long t = System.currentTimeMillis();
+//		long t = System.currentTimeMillis();
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
@@ -450,14 +450,14 @@ public class MLPaintPanel extends JComponent
 			return;
 		}
 		g2.transform(view);
-		t = reportTime(t, "Initialized the g2 graphic for repainting.");
+		//t = reportTime(t, "Initialized the g2 graphic for repainting.");
 
 		if (showClassifierC) {                           // MAYDO: instead have a transparency slider??  That'd be cool.
 			g2.drawImage(classifierOutput, 0, 0, null);
-			t = reportTime(t, "Classifier output drawn.");
+//			t = reportTime(t, "Classifier output drawn.");
 		} else {
 			g2.drawImage(image, 0, 0, null);
-			t = reportTime(t, "Image drawn.");
+//			t = reportTime(t, "Image drawn.");
 		}
 
 		//g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
@@ -465,7 +465,7 @@ public class MLPaintPanel extends JComponent
 			g2.drawImage(labels, 0, 0, null);
 		}
 		g2.drawImage(visLabels, 0, 0, null);
-		t = reportTime(t, "Labels drawn via affine transform and alpha-painted area.");
+		//t = reportTime(t, "Labels drawn via affine transform and alpha-painted area.");
 
 		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
 			g2.setColor(FRESH_COLORS[FRESH_POS] );
@@ -477,7 +477,7 @@ public class MLPaintPanel extends JComponent
 				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
 				g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
 			}
-			t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
+		//	t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
 
 
@@ -485,7 +485,7 @@ public class MLPaintPanel extends JComponent
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
 		g2.drawRect(0, 0, width, height);
-		t = reportTime(t, "Pretty frame drawn.");
+		//t = reportTime(t, "Pretty frame drawn.");
 
 		//Draw the fresh paint.
 		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
@@ -496,12 +496,12 @@ public class MLPaintPanel extends JComponent
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
 			g2.fill(antiPaintArea);
 			//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-			t = reportTime(t, "Fresh paint drawn.");
+		//	t = reportTime(t, "Fresh paint drawn.");
 		} else {
 			crossHatchArea(g2, freshPaintArea,FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
 			crossHatchArea(g2, antiPaintArea, FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 		}
-		t = reportTime(t, "cross hatched fresh paint drawn");
+		//t = reportTime(t, "cross hatched fresh paint drawn");
 
 		if (undoInProgress) {
 			undoInProgress = false;
@@ -1041,7 +1041,9 @@ public class MLPaintPanel extends JComponent
 			// If the coordinates are already labeled in the real image, don't even consider it.
 		WritableRaster rawdata = labels.getRaster();
 		int labelsVal = rawdata.getSample(x,y,0);
-		if (labelsVal != UNLABELED && noRelabel == true){
+		if ( labelsVal != UNLABELED && noRelabel == true){
+			return Double.POSITIVE_INFINITY;
+		} else if (labelsVal == NO_DATA) {
 			return Double.POSITIVE_INFINITY;
 		}
 			// If freshPaint positive, return  MIN_DISTANCE_VALUE, probably 0.
