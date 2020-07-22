@@ -80,7 +80,6 @@ public class MLPaintApp extends SwingApp {
 	private SwingLink setupLink = new SwingLink("   Loading image, previous labels",
 			"https://www.youtube.com/watch?v=ynDJ86NST30&feature=youtu.be");
 
-
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
