@@ -45,17 +45,17 @@ public class MLPaintApp extends SwingApp {
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
-	private AbstractAction lock = newAction("Lock accepted labels against change", (name,ev) -> lockLabels());
+	private AbstractAction lock = newAction("Lock accepted labels against change.", (name,ev) -> lockLabels());
 	private AbstractAction lockFromBox = newAction("Lock accepted labels against change (Ctrl-L|control L", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private AbstractAction penMode = newAction("Set to nearly-pen mode", (name,ev) -> makePenMode());
+	private AbstractAction penMode = newAction("Set to nearly-pen mode.", (name,ev) -> makePenMode());
 	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
 	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-	private ActionTracker space = new ActionTracker("Accept suggestion as non-m... (Space)| SPACE",
+	private ActionTracker space = new ActionTracker("Accept suggestion as non-mangrove (Space)| SPACE",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
@@ -116,7 +116,7 @@ public class MLPaintApp extends SwingApp {
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 				controls, mlp);
 		splitPane.setOneTouchExpandable(true);
-		splitPane.setDividerLocation(300);
+		splitPane.setDividerLocation(333);
 
 		//Provide minimum sizes for the two components in the split pane
 		Dimension minimumSize = new Dimension(200, 50);
@@ -154,7 +154,7 @@ public class MLPaintApp extends SwingApp {
 		controls.add(workflowLink);
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("1. Choose a mangrove or else non-mangrove region to label."));
+		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
@@ -166,10 +166,10 @@ public class MLPaintApp extends SwingApp {
 		right.addAsButton(controls);
 		left.addAsButton(controls);
 		controls.add(new JLabel("  A. Brush on more select-paint. (click-and-drag)"));
-		controls.add(new JLabel("  B. Brush on anti-paint. (SHIFT + click-and-drag)"));
+		controls.add(new JLabel("  B. Brush on anti-paint. (Shift + click-and-drag)"));
 		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
 		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
-		controls.add(new JLabel("  C. Erase paint. (Alt/Option + click-and-drag)"));
+		controls.add(new JLabel("  C. Erase paint. (Alt or Option + click-and-drag)"));
 		controls.add(isPenMode);
 		//SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
 
@@ -193,8 +193,8 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("5. Move to the next spot."));
-		controls.add(new JLabel("     Pan (CTRL + drag)"));
-		controls.add(new JLabel("     Zoom (CTRL + scroll) <- Not Pinch!"));
+		controls.add(new JLabel("     Pan (Ctrl + click-and-drag)"));
+		controls.add(new JLabel("     Zoom (Ctrl + scroll) <- Not Pinch!"));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("Act on labels:"));

@@ -99,7 +99,7 @@ public class MLPaintPanel extends JComponent
 
 	private SoftClassifier<double[]> classifier;
 	private SoftClassifier<double[]> spareClassifier;
-	private final boolean allowSpareClassifier = false;
+	private final boolean allowSpareClassifier = true;
 	private final int maxPositives = 4000;
 	private final int maxNegatives = 8000;
 	private boolean isPULearning = true;
@@ -110,7 +110,7 @@ public class MLPaintPanel extends JComponent
 	 */
 	private float[][] distances;
 	private float[][] spareDistances = null; //= new double[width][height];
-	public double scorePower = 3.0;
+	public double scorePower = 2.0;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
 	private int dijkstraStep = 5; // For squares of 9 //This could be optimized so that if we zoom in
