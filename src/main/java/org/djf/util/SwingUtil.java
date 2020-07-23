@@ -2,11 +2,14 @@ package org.djf.util;
 
 import java.awt.*;
 import java.awt.color.ColorSpace;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.PriorityQueue;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
@@ -19,9 +22,12 @@ import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.checkerframework.checker.units.qual.C;
 import org.djf.mlpaint.ImageResamplingDims;
 import org.djf.mlpaint.MyPoint;
+
+import static org.djf.util.SwingApp.reportTime;
 
 /** Swing Utilities.
  * 
@@ -109,13 +115,12 @@ public class SwingUtil {
 		}
 		System.out.println("We got the same color in the four corners of the image. \n" +
 				"So fill it in with NO_DATA for the labels image.");
-		fillCodeByColor(image, imgMainCode, labels, labelsCode);
+		connCompFillLabelCodeByImgCode(image, imgMainCode, labels, labelsCode, 3);
 	}
 
 	public static void fillCodeByColor(BufferedImage image, int imgMainCode, BufferedImage labels, int labelsCode) {
 		WritableRaster img = image.getRaster();
 		WritableRaster lbl = labels.getRaster();
-		ColorModel imgCm = image.getColorModel();
 		for (int i=0; i < img.getWidth(); i++ ) {
 			for (int j=0; j < img.getHeight(); j++) {
 				int imgCode = img.getSample(i,j,0);
@@ -124,7 +129,67 @@ public class SwingUtil {
 				}
 			}
 		}
+	}
 
+	public static void connCompFillLabelCodeByImgCode(BufferedImage image, int imgKeyCode, BufferedImage labels, int labelsKeyCode, int patchEdgeSize) {
+		WritableRaster img = image.getRaster();
+		WritableRaster lbl = labels.getRaster();
+		for (int i=0; i < img.getWidth()+1-patchEdgeSize; i++ ) {
+			for (int j=0; j < img.getHeight()+1-patchEdgeSize; j++) {
+				int lblCode = lbl.getSample(i,j,0);
+				if (lblCode != labelsKeyCode) {
+					boolean pursueThisOne = true;
+					for (int x=0; x < patchEdgeSize; x++ ) {
+						for (int y = 0; y < patchEdgeSize; y++) {
+							int imgCode = img.getSample(i, j, 0);
+							if (imgCode != imgKeyCode) {
+								pursueThisOne = false;
+								break;
+							}
+						}
+					}
+					if (pursueThisOne) {
+						fillComponent(i, j, img, imgKeyCode, lbl, labelsKeyCode);
+					}
+				}
+			}
+		}
+	}
+	public static void fillComponent(int i, int j, WritableRaster img, int imgKeyCode, WritableRaster lbl, int labelsKeyCode) {
+
+		List<int[]> connectedComponents = Lists.newLinkedList();
+		int[] seedPoint = new int[]{i,j};
+		connectedComponents.add(seedPoint);
+		lbl.setSample(i,j,0, labelsKeyCode);
+
+		while (!connectedComponents.isEmpty()) { // Repeat until no more to get
+
+			int[] choicePoint = connectedComponents.remove(0);
+
+			int[][] adjEight = {		{choicePoint[0],choicePoint[1]+1},
+					{choicePoint[0],choicePoint[1]-1},
+					{choicePoint[0]+1,choicePoint[1]},
+					{choicePoint[0]-1,choicePoint[1]},
+
+					{choicePoint[0]-1,choicePoint[1]-1},
+					{choicePoint[0]+1,choicePoint[1]+1},
+					{choicePoint[0]-1,choicePoint[1]+1},
+					{choicePoint[0]+1,choicePoint[1]-1}
+			};
+			for (int[] pair : adjEight) {
+				int xmine = pair[0];
+				int ymine = pair[1];
+				if (xmine <0 || ymine < 0 || xmine >= img.getWidth() || ymine >= img.getHeight()) continue;//	if isOutsideImage: continue
+				int lblCode = lbl.getSample(xmine, ymine,0);
+				if (lblCode != labelsKeyCode) { //So we can tell it is new, or not what we want
+					int imgCode = img.getSample(xmine, ymine, 0);
+					if (imgCode == imgKeyCode) {
+						lbl.setSample(xmine, ymine, 0, labelsKeyCode);
+						connectedComponents.add(new int[]{xmine, ymine});
+					}
+				}
+			}
+		}
 	}
 
 	public static void addImage(BufferedImage buff1, BufferedImage buff2) {

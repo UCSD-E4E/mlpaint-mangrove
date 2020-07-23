@@ -58,7 +58,7 @@ public class MLPaintPanel extends JComponent
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.blue, Color.RED, SwingUtil.ALPHABLUE};
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
 
-	private static final double EDGE_DISTANCE_FRESH_POS = 0.0001;
+	private static final double EDGE_DISTANCE_FRESH_POS = 0.00001;
 	public static final int DEFAULT_DIJSKTRA_GROWTH = 26;
 	public static final int INTERIOR_STEPS = 10; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
 	public static int dijkstraGrowth = DEFAULT_DIJSKTRA_GROWTH;
@@ -113,7 +113,7 @@ public class MLPaintPanel extends JComponent
 	public double scorePower = 2.0;
 	public ArrayList<PriorityQueue<MyPoint>> listQueues = null;
 	public int queueBoundsIdx = -10;
-	private int dijkstraStep = 5; // For squares of 9 //This could be optimized so that if we zoom in
+	private int dijkstraStep = 3; // For squares of 9 //This could be optimized so that if we zoom in
 	//MAYDO: Optimize this to go even bigger when we're on huge scale and shrink to 1 when we are zoomed in.
 
 	/** suggested area to transfer to labels.  TBD. just a binary mask?  or does it have a few levels?  Or what?? */
