@@ -192,6 +192,40 @@ public class SwingUtil {
 		}
 	}
 
+	public static TexturePaint getTexturePaint(Color foregroundColor, Color backdropColor) {
+		//Make a texture
+		int gsize = 100;
+		BufferedImage bufferedImage =
+				new BufferedImage(gsize, gsize, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = bufferedImage.createGraphics();
+		//Paint the edges of lines on the repeating patterns of the texture
+		g2d.setColor(SwingUtil.TRANSPARENT);
+		g2d.fillRect(0, 0, gsize, gsize);
+		g2d.setColor(backdropColor);
+		g2d.drawLine(0, 0+2, gsize-2, gsize); // \
+		g2d.drawLine(0+2, 0, gsize, gsize-2); // \
+		g2d.drawLine(-1, gsize+2, gsize, 1); // /
+		g2d.drawLine(-1, gsize-2, gsize, -3); // /
+		g2d.drawLine(0, 0+3, gsize-3, gsize); // \
+		g2d.drawLine(0+3, 0, gsize, gsize-3); // \
+		g2d.drawLine(-1, gsize+3, gsize, 2); // /
+		g2d.drawLine(-1, gsize-3, gsize, -4); // /
+		//Paint the center lines on the repeating pattern
+		g2d.setColor(foregroundColor);
+		g2d.drawLine(0, 0, gsize, gsize); // \
+		g2d.drawLine(-1, gsize, gsize, -1); // /
+		g2d.drawLine(0, 0+1, gsize-1, gsize); // \
+		g2d.drawLine(0+1, 0, gsize, gsize-1); // \
+		g2d.drawLine(-1, gsize+1, gsize, 0); // /
+		g2d.drawLine(-1, gsize-1, gsize, -2); // /
+
+		// paint with the texturing brush
+		Rectangle2D rect = new Rectangle2D.Double(0, 0, gsize, gsize);
+		TexturePaint textureP = new TexturePaint(bufferedImage, rect);
+		g2d.dispose();
+		return textureP;
+	}
+
 	public static void addImage(BufferedImage buff1, BufferedImage buff2) {
 		Graphics2D g2d = buff1.createGraphics();
 		g2d.setComposite(

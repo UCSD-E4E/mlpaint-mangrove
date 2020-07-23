@@ -32,6 +32,7 @@ import smile.classification.SoftClassifier;
 
 import static org.djf.util.SwingApp.reportTime;
 import static org.djf.util.SwingApp.runBackground;
+import static org.djf.util.SwingUtil.getTexturePaint;
 
 //JAR import javafx.beans.property.SimpleBooleanProperty;
 
@@ -57,6 +58,9 @@ public class MLPaintPanel extends JComponent
 	private static final int FRESH_NEG = 2;
 	private static final Color[] FRESH_COLORS = {SwingUtil.TRANSPARENT, Color.blue, Color.RED, SwingUtil.ALPHABLUE};
 	private static final Color[] BACKDROP_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.SKYBLUE, SwingUtil.SKYRED, Color.YELLOW};
+	private static final TexturePaint freshPosTexture = getTexturePaint( FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
+	private static final TexturePaint freshNegTexture = getTexturePaint( FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
+
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.00001;
 	public static final int DEFAULT_DIJSKTRA_GROWTH = 26;
@@ -191,7 +195,7 @@ public class MLPaintPanel extends JComponent
 
 	public void resetView() {
 		view = new AffineTransform();
-		double scale =  925.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
+		double scale =  880.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
 		view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
 		showClassifierC = false; //JAR		showClassifier.set(false);
 		brushRadius = radiusFromChDigit('5');
@@ -375,14 +379,14 @@ public class MLPaintPanel extends JComponent
 
 	public void multiplyBrushRadius(double scale) {
 		brushRadius *= scale;
-		brushRadius = Math.max(((double) dijkstraStep)/2, brushRadius);// never < 1 pixel
+		brushRadius = Math.max(((double) dijkstraStep)/2 + 1, brushRadius);// never < 1 pixel
 		brushRadius = Math.min(brushRadius, 3*radiusFromChDigit('9'));
 		System.out.printf("brushRadius := %s\n", brushRadius);
 	}
 
 	public double radiusFromChDigit(char ch) {
 		int rr = 2 * (ch - '0' + 1);
-		return Math.max(rr, dijkstraStep/2.0);
+		return Math.max(rr, dijkstraStep/2.0 + 1);
 	}
 
 	private void eraseFreshPaint(MouseEvent e) {
@@ -490,8 +494,7 @@ public class MLPaintPanel extends JComponent
 
 		//Draw the fresh paint.
 		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
-		boolean asImage = false;
-		if (asImage) {
+		if (false) {
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
 			g2.fill(freshPaintArea);
 			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
@@ -499,8 +502,9 @@ public class MLPaintPanel extends JComponent
 			//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
 		//	t = reportTime(t, "Fresh paint drawn.");
 		} else {
-			crossHatchArea(g2, freshPaintArea,FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
-			crossHatchArea(g2, antiPaintArea, FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
+
+			crossHatchArea(g2, freshPaintArea, freshPosTexture,  FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS] );
+			crossHatchArea(g2, antiPaintArea, freshNegTexture,   FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 		}
 		//t = reportTime(t, "cross hatched fresh paint drawn");
 
@@ -510,47 +514,19 @@ public class MLPaintPanel extends JComponent
 		g2.dispose();
 	}
 
-	private void crossHatchArea(Graphics2D g2, Shape thisArea, Color foregroundColor, Color backdropColor) {
-		int gsize = 100;
+	private void crossHatchArea(Graphics2D g2, Shape thisArea, TexturePaint textureP, Color foregroundColor, Color backdropColor) {
 		Composite memComposite = g2.getComposite();
 		Stroke memStroke = g2.getStroke();
 		Paint memPaint = g2.getPaint();
 		Color memColor = g2.getColor();
 
 		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
-		//Make a texture
-		BufferedImage bufferedImage =
-				new BufferedImage(gsize, gsize, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = bufferedImage.createGraphics();
-		//Paint the edges of lines on the repeating patterns of the texture
-		g2d.setColor(SwingUtil.TRANSPARENT);
-		g2d.fillRect(0, 0, gsize, gsize);
-		g2d.setColor(backdropColor);
-		g2d.drawLine(0, 0+2, gsize-2, gsize); // \
-		g2d.drawLine(0+2, 0, gsize, gsize-2); // \
-		g2d.drawLine(-1, gsize+2, gsize, 1); // /
-		g2d.drawLine(-1, gsize-2, gsize, -3); // /
-		g2d.drawLine(0, 0+3, gsize-3, gsize); // \
-		g2d.drawLine(0+3, 0, gsize, gsize-3); // \
-		g2d.drawLine(-1, gsize+3, gsize, 2); // /
-		g2d.drawLine(-1, gsize-3, gsize, -4); // /
-		//Paint the center lines on the repeating pattern
-		g2d.setColor(foregroundColor);
-		g2d.drawLine(0, 0, gsize, gsize); // \
-		g2d.drawLine(-1, gsize, gsize, -1); // /
-		g2d.drawLine(0, 0+1, gsize-1, gsize); // \
-		g2d.drawLine(0+1, 0, gsize, gsize-1); // \
-		g2d.drawLine(-1, gsize+1, gsize, 0); // /
-		g2d.drawLine(-1, gsize-1, gsize, -2); // /
+
+		g2.setPaint(textureP);
+		g2.fill(thisArea);
 
 		Stroke triplePixel = new BasicStroke(9.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_ROUND);
 		Stroke singlePixel = new BasicStroke(5.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND);
-
-		// paint with the texturing brush
-		Rectangle2D rect = new Rectangle2D.Double(0, 0, gsize, gsize);
-		g2.setPaint(new TexturePaint(bufferedImage, rect));
-		g2.fill(thisArea);
-
 
 		g2.setStroke(triplePixel);
 		g2.setColor(backdropColor);
@@ -565,7 +541,6 @@ public class MLPaintPanel extends JComponent
 		g2.setPaint(memPaint);
 		g2.setColor(memColor);
 
-		g2d.dispose();
 	}
 
 

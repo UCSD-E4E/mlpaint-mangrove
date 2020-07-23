@@ -2,10 +2,12 @@ package org.djf.mlpaint;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 
 import javax.imageio.ImageIO;
@@ -71,8 +73,8 @@ public class MLPaintApp extends SwingApp {
 	//Less interesting abstract actions
 	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
-	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (any digit)",   (name,ev) -> mlp.actOnChar('5'));
-	private ActionTracker plus = 		new ActionTracker("Weight classifier more in suggestion | W", (name,ev) -> adjustPower(+0.25));
+	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (click any digit 1-9)",   (name,ev) -> mlp.actOnChar('5'));
+	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | W", (name,ev) -> adjustPower(+0.25));
 	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | Q", (name, ev) -> adjustPower(-0.25));
 
 	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
@@ -116,7 +118,7 @@ public class MLPaintApp extends SwingApp {
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
 				controls, mlp);
 		splitPane.setOneTouchExpandable(true);
-		splitPane.setDividerLocation(333);
+		splitPane.setDividerLocation(355);
 
 		//Provide minimum sizes for the two components in the split pane
 		Dimension minimumSize = new Dimension(200, 50);
@@ -163,13 +165,26 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("3. Control the auto-selection."));
+
+		JLabel a = new JLabel("  A. Brush on more select-paint. (click-and-drag)");
+		JLabel b = new JLabel("  B. Brush on anti-paint. (Shift + click-and-drag)");
+		JLabel b1 = new JLabel("       -> \"Avoid these pixels.\"");
+		JLabel b2 = new JLabel("       -> \"Try to avoid pixels like these.\"");
+		JLabel c = new JLabel("  C. Erase paint. (Alt or Option + click-and-drag)");
+
+		Font font = a.getFont();
+		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+		b.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+		c.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+
+		controls.add(a);
+		controls.add(b);
+		controls.add(b1);
+		controls.add(b2);
+		controls.add(c);
+
 		right.addAsButton(controls);
 		left.addAsButton(controls);
-		controls.add(new JLabel("  A. Brush on more select-paint. (click-and-drag)"));
-		controls.add(new JLabel("  B. Brush on anti-paint. (Shift + click-and-drag)"));
-		controls.add(new JLabel("       -> \"Avoid these pixels.\""));
-		controls.add(new JLabel("       -> \"Try to avoid pixels like these.\""));
-		controls.add(new JLabel("  C. Erase paint. (Alt or Option + click-and-drag)"));
 		controls.add(isPenMode);
 		//SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
 
@@ -280,12 +295,12 @@ public class MLPaintApp extends SwingApp {
 						null,
 						ctrl0.menuItem,
 						null,
-						right.menuItem,
-						left.menuItem,
-						null,
-						up.menuItem,
-						down.menuItem,
-						null,
+//						right.menuItem,
+//						left.menuItem,
+//						null,
+//						up.menuItem,
+//						down.menuItem,
+//						null,
 						plus.menuItem,
 						minus.menuItem,
 				null);
