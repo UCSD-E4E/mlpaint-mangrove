@@ -57,7 +57,7 @@ public class MLPaintApp extends SwingApp {
 	private AbstractAction lockFromBox = newAction("Lock accepted labels against change (Ctrl-L|control L", (name,ev) -> lockLabelsFromControlBox());
 	private JCheckBox noRelabel = new JCheckBox(lock);
 
-	private AbstractAction penMode = newAction("Set to nearly-pen mode.", (name,ev) -> makePenMode());
+	private AbstractAction penMode = newAction("Set auto-selection to pen size.", (name,ev) -> makePenMode());
 	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
@@ -67,11 +67,11 @@ public class MLPaintApp extends SwingApp {
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
-	private ActionTracker save = new ActionTracker("Save labels... (Ctrl-S)|control S", this::saveLabels);
+	private ActionTracker save = new ActionTracker("Save labels in image directory (Ctrl-S)|control S", this::saveLabels);
 
-	private ActionTracker delete = 		new ActionTracker("Clear suggestion (Backspace)|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
-	private ActionTracker right = 		new ActionTracker("Grow suggestion (X)|X", (name,ev) -> mlp.growSuggestion());
-	private ActionTracker left = 		new ActionTracker("Shrink suggestion (Z)|Z", (name,ev) -> mlp.shrinkSuggestion());
+	private ActionTracker delete = 		new ActionTracker("Undo select-paint (Backspace)|BACK_SPACE", (name,ev) -> mlp.initializeFreshPaint());
+	private ActionTracker right = 		new ActionTracker("Grow auto-selection (X)|X", (name,ev) -> mlp.growSuggestion());
+	private ActionTracker left = 		new ActionTracker("Shrink auto-selection (Z)|Z", (name,ev) -> mlp.shrinkSuggestion());
 
 	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> { double b = mlp.multiplyBrushRadius(1.15);
 																										brushRadiusSlider.setValue((int) (b*10));
@@ -185,8 +185,26 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
+		controls.add(new JLabel("2. Brush on select-paint and avoid-paint."));
 
+		JLabel a = new JLabel("  Select-paint: (click-and-drag)");
+		JLabel a1 = new JLabel("       -- \"Select these pixels.\"");
+		JLabel a2 = new JLabel("       -- \"Try to select pixels like these.\"");
+		JLabel b = new JLabel("  Avoid-paint: (Shift + click-and-drag)");
+		JLabel b1 = new JLabel("       -- \"Avoid these pixels.\"");
+		JLabel b2 = new JLabel("       -- \"Try to avoid pixels like these.\"");
+		JLabel c = new JLabel("  Erase-paint: (Alt or Option + click-and-drag)");
+
+		Font font = a.getFont();
+		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+		b.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+
+		controls.add(new JLabel("  "));
+		controls.add(a); controls.add(a1); controls.add(a2);
+		controls.add(b);
+		controls.add(b1);
+		controls.add(b2);
+		controls.add(c);
 		//up.addAsButton(controls);
 		//down.addAsButton(controls);
 
@@ -219,7 +237,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoBox(controls, down.keyStroke, down.action);
 
 		controls.add(new JLabel("  "));
-		JLabel sliderText = new JLabel("Paintbrush size (hover for keyboard shortcuts):");
+		JLabel sliderText = new JLabel("Paintbrush size: (hover for keyboard shortcuts)");
 		sliderText.setToolTipText(sliderHoverText);
 		controls.add(sliderText);
 		controls.add(brushRadiusSlider);
@@ -227,24 +245,7 @@ public class MLPaintApp extends SwingApp {
 		//controls.add(new JLabel("Set brush size: digits (1)-(9)"));
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("3. Control the auto-selection."));
-
-		JLabel a = new JLabel("  A. Brush on more select-paint. (click-and-drag)");
-		JLabel b = new JLabel("  B. Brush on anti-paint. (Shift + click-and-drag)");
-		JLabel b1 = new JLabel("       -> \"Avoid these pixels.\"");
-		JLabel b2 = new JLabel("       -> \"Try to avoid pixels like these.\"");
-		JLabel c = new JLabel("  C. Erase paint. (Alt or Option + click-and-drag)");
-
-		Font font = a.getFont();
-		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
-		b.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
-		c.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
-
-		controls.add(a);
-		controls.add(b);
-		controls.add(b1);
-		controls.add(b2);
-		controls.add(c);
+		controls.add(new JLabel("3. Resize the auto-selection."));
 
 		right.addAsButton(controls);
 		left.addAsButton(controls);
@@ -263,8 +264,7 @@ public class MLPaintApp extends SwingApp {
 
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("4. Deal with auto-selection."));
-		delete.addAsButton(controls);
+		controls.add(new JLabel("4. Label the auto-selection."));
 
 		enter.addAsButton(controls);
 		space.addAsButton(controls);
@@ -275,11 +275,16 @@ public class MLPaintApp extends SwingApp {
 		controls.add(new JLabel("     Zoom (Ctrl + scroll) <- Not Pinch!"));
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("Act on labels:"));
+		controls.add(new JLabel("Deal with mistakes:"));
+		delete.addAsButton(controls);
 		undo.addAsButton(controls);
-		noRelabel.setMnemonic(KeyEvent.VK_C);
+		//noRelabel.setMnemonic(KeyEvent.VK_C);
+		controls.add(new JLabel("  "));
 		controls.add(noRelabel);
+		controls.add(new JLabel("      (Unlock labels to edit them.)"));
 		//SwingUtil.putActionIntoBox(controls, "lockFromBoxCode", lockFromBox);
+		controls.add(new JSeparator());
+		controls.add(new JLabel("And the surest recovery method:"));
 		save.addAsButton(controls);
 		controls.add(new JSeparator());
 
@@ -344,7 +349,7 @@ public class MLPaintApp extends SwingApp {
 		JMenu file = newMenu("File",
 				newMenuItem("Open image, labels...|control O", this::openImage),
 				save.menuItem,
-				newMenuItem("Save and Exit", this::exit),
+				newMenuItem("Exit the Program After Saving the Labels", this::exit),
 				null);
 
 		JMenu view = newMenu("View",
