@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import javax.imageio.ImageIO;
 import javax.imageio.metadata.IIOMetadata;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import org.djf.util.SwingApp;
 
@@ -38,11 +40,15 @@ public class MLPaintApp extends SwingApp {
 	private Path currentImageFile;
 
 	/** magic label paint panel that holds the secret sauce */
-	private MLPaintPanel mlp = null;
+	private MLPaintPanel mlp = new MLPaintPanel();
 
 	private IIOMetadata currentImageMetadata = null;
 	private IIOMetadata currentLabelsMetadata = null;
 
+
+	JSlider brushRadiusSlider = new JSlider((int) (mlp.radiusFromChDigit('1')*10),
+			(int) (mlp.radiusFromChDigit('9')*10),
+			(int) (mlp.radiusFromChDigit('4')*10));
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 
@@ -67,13 +73,29 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker right = 		new ActionTracker("Grow suggestion (X)|X", (name,ev) -> mlp.growSuggestion());
 	private ActionTracker left = 		new ActionTracker("Shrink suggestion (Z)|Z", (name,ev) -> mlp.shrinkSuggestion());
 
-	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> mlp.multiplyBrushRadius(1.5));
-	private ActionTracker down = 		new ActionTracker("Smaller brush (A)|A", (name,ev) -> mlp.multiplyBrushRadius(1.0/1.5));
+	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> { double b = mlp.multiplyBrushRadius(1.15);
+																										brushRadiusSlider.setValue((int) (b*10));
+																										});
+	private ActionTracker down = 		new ActionTracker("Smaller brush (A)|A", (name,ev) -> {double b = mlp.multiplyBrushRadius(1.0/1.15);
+																										brushRadiusSlider.setValue((int) (b*10));
+																										});
 
 	//Less interesting abstract actions
 	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
-	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (click any digit 1-9)",   (name,ev) -> mlp.actOnChar('5'));
+	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (click any digit 1-9)",   (name,ev) -> {
+		setBrush('4');
+	});
+	private ActionTracker digitOne = 		new ActionTracker("Set brush size to 1 |1",   (name,ev) -> setBrush('1'));
+	private ActionTracker digitTwo = 		new ActionTracker("Set brush size to 2 |2",   (name,ev) -> setBrush('2'));
+	private ActionTracker digitThree = 		new ActionTracker("Set brush size to 3 |3",   (name,ev) -> setBrush('3'));
+	private ActionTracker digitFour = 		new ActionTracker("Set brush size to 4 |4",   (name,ev) -> setBrush('4'));
+	private ActionTracker digitFive = 		new ActionTracker("Set brush size to 5 |5",   (name,ev) -> setBrush('5'));
+	private ActionTracker digitSix = 		new ActionTracker("Set brush size to 6 |6",   (name,ev) -> setBrush('6'));
+	private ActionTracker digitSeven = 		new ActionTracker("Set brush size to 7 |7",   (name,ev) -> setBrush('7'));
+	private ActionTracker digitEight = 		new ActionTracker("Set brush size to 8 |8",   (name,ev) -> setBrush('8'));
+	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |9",   (name,ev) -> setBrush('9'));
+
 	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | W", (name,ev) -> adjustPower(+0.25));
 	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | Q", (name, ev) -> adjustPower(-0.25));
 
@@ -81,6 +103,8 @@ public class MLPaintApp extends SwingApp {
 			"https://www.youtube.com/watch?v=m0N1C22AFdc");
 	private SwingLink setupLink = new SwingLink("   Loading image, previous labels",
 			"https://www.youtube.com/watch?v=ynDJ86NST30&feature=youtu.be");
+	private SwingLink documentationLink = new SwingLink( "Tutorials: Setup & Labeling Workflow",
+			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/#tutorial-loading-an-image-to-label");
 
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
@@ -105,14 +129,15 @@ public class MLPaintApp extends SwingApp {
 	 */
 	private void makeContent() {
 		// NORTH- nothing
-		
-		// WEST
-		Box controls = getControlBox();
+
 
 		// CENTER
-		mlp = new MLPaintPanel();
+		//mlp = new MLPaintPanel();
 		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		//add(mlp, BorderLayout.OPEN_CENTER);
+
+		// WEST  (It is important that mlp is initialized first, for the sake of the JSlider.)
+		Box controls = getControlBox();
 
 		//Create a split pane with the two scroll panes in it.
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
@@ -148,20 +173,58 @@ public class MLPaintApp extends SwingApp {
 		controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
 		controls.add(new JSeparator());
-		controls.add(new JLabel("Setup:"));
-		controls.add(setupLink);
-
-		controls.add(new JSeparator());
-		controls.add(new JLabel("Workflow:"));
-		controls.add(workflowLink);
+//		controls.add(new JLabel("Setup:"));
+//		controls.add(setupLink);
+//
+//		controls.add(new JSeparator());
+//		controls.add(new JLabel("Workflow:"));
+//		controls.add(workflowLink);
+		controls.add(documentationLink);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Click-and-drag to brush on select-paint."));
-		up.addAsButton(controls);
-		down.addAsButton(controls);
+
+		//up.addAsButton(controls);
+		//down.addAsButton(controls);
+
+		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Digits (1)-(9) set the brush size.";
+		brushRadiusSlider.setToolTipText(sliderHoverText);
+
+		//...where initialization occurs:
+		class BrushSliderListener implements ChangeListener {
+			public void stateChanged(ChangeEvent e) {
+				JSlider source = (JSlider)e.getSource();
+				if (!source.getValueIsAdjusting()) {
+					double brushRadius = (double)source.getValue() / 10.0;
+					mlp.brushRadius = brushRadius;
+				}
+			}
+		}
+		brushRadiusSlider.addChangeListener(new BrushSliderListener());
+
+		SwingUtil.putActionIntoBox(controls, digitOne.keyStroke, digitOne.action);
+		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
+		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
+		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
+		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
+		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
+		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
+		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
+		SwingUtil.putActionIntoBox(controls, digitNine.keyStroke, digitNine.action);
+
+		SwingUtil.putActionIntoBox(controls, up.keyStroke, up.action);
+		SwingUtil.putActionIntoBox(controls, down.keyStroke, down.action);
+
+		controls.add(new JLabel("  "));
+		JLabel sliderText = new JLabel("Paintbrush size (hover for keyboard shortcuts):");
+		sliderText.setToolTipText(sliderHoverText);
+		controls.add(sliderText);
+		controls.add(brushRadiusSlider);
+		//controls.add(new JLabel("Shrink & grow brush size: (A) & (S)"));
+		//controls.add(new JLabel("Set brush size: digits (1)-(9)"));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("3. Control the auto-selection."));
@@ -291,8 +354,8 @@ public class MLPaintApp extends SwingApp {
 				null);
 
 		JMenu label = newMenu("Label",
-				digit.menuItem,
-						null,
+				//digit.menuItem,
+				//		null,
 						ctrl0.menuItem,
 						null,
 //						right.menuItem,
@@ -442,5 +505,10 @@ public class MLPaintApp extends SwingApp {
 		status("TODO %s\n", command);
 	}
 
+	private void setBrush(char ch) {
+		double b = mlp.radiusFromChDigit(ch);
+		mlp.brushRadius = b;
+		brushRadiusSlider.setValue((int)(b*10));
+	}
 
 }

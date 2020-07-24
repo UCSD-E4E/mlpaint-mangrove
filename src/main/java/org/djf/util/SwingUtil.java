@@ -412,8 +412,15 @@ public class SwingUtil {
 
 	/** Put an action onto a Box */
 	public static void putActionIntoBox(Box controls, String textKey, AbstractAction roar) {
-		InputMap inputMap = controls.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+		InputMap inputMap = controls.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
 		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
 		controls.getActionMap().put(textKey, roar);
 	}
+	public static void putActionIntoBox(Box controls, char textKey, AbstractAction roar) {
+		InputMap inputMap = controls.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
+		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
+		controls.getActionMap().put(textKey, roar);
+	}
+
+
 }

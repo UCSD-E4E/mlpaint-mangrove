@@ -99,7 +99,7 @@ public class MLPaintPanel extends JComponent
 	private List<Point2D> dijkstraPossibleSeeds = Lists.newArrayListWithCapacity(1000);
 
 	/** pixel size of the brush.  */
-	public double brushRadius = radiusFromChDigit('5');
+	public double brushRadius = radiusFromChDigit('4');
 
 	private SoftClassifier<double[]> classifier;
 	private SoftClassifier<double[]> spareClassifier;
@@ -198,7 +198,7 @@ public class MLPaintPanel extends JComponent
 		double scale =  880.0 / width; //MAYDO: Find the true JPanel size and use that. This is arbitrary, maybe.
 		view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
 		showClassifierC = false; //JAR		showClassifier.set(false);
-		brushRadius = radiusFromChDigit('5');
+		brushRadius = radiusFromChDigit('4');
 		repaint();
 	}
 
@@ -328,16 +328,13 @@ public class MLPaintPanel extends JComponent
 	@Override
 	public void keyTyped(KeyEvent e) {
 		System.out.printf("KeyTyped %s\n", e);// repeats if held, for normal typing, not function keys
-		char ch = e.getKeyChar();
-		actOnChar(ch);
+		//char ch = e.getKeyChar();
+		//actOnChar(ch);
 	}
 
 	public void actOnChar(char ch) {
 		System.out.println("actOnChar was called.");
-		if (Character.isDigit(ch)) {
-			brushRadius = radiusFromChDigit(ch);// somehow translate it
-			// show the user too
-			System.out.printf("paintbrush radius: %s\n", brushRadius);
+		if (false) {
 		//MAYDO: Test if in keys, then send the appropriate digit from a dict.
 			// That way we can add labels interactively in the GUI by changing the keys variable.
 		} else {
@@ -377,15 +374,16 @@ public class MLPaintPanel extends JComponent
 	}
 
 
-	public void multiplyBrushRadius(double scale) {
+	public double multiplyBrushRadius(double scale) {
 		brushRadius *= scale;
 		brushRadius = Math.max(((double) dijkstraStep)/2 + 1, brushRadius);// never < 1 pixel
-		brushRadius = Math.min(brushRadius, 3*radiusFromChDigit('9'));
+		brushRadius = Math.min(brushRadius, radiusFromChDigit('9'));
 		System.out.printf("brushRadius := %s\n", brushRadius);
+		return brushRadius;
 	}
 
 	public double radiusFromChDigit(char ch) {
-		int rr = ( (int) Math.pow(1.25, ch-'0')) * (ch - '0' + 1);
+		int rr = ( (int) (Math.pow(1.25, ch-'0')+0.1)) * (ch - '0' + 1);
 		return Math.max(rr, dijkstraStep/2.0 + 1);
 	}
 
