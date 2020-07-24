@@ -385,7 +385,7 @@ public class MLPaintPanel extends JComponent
 	}
 
 	public double radiusFromChDigit(char ch) {
-		int rr = 2 * (ch - '0' + 1);
+		int rr = ( (int) Math.pow(1.25, ch-'0')) * (ch - '0' + 1);
 		return Math.max(rr, dijkstraStep/2.0 + 1);
 	}
 
