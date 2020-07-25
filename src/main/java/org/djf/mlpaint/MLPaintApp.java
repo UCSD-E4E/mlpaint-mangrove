@@ -272,7 +272,8 @@ public class MLPaintApp extends SwingApp {
 
 		controls.add(new JLabel("5. Move to the next spot."));
 		controls.add(new JLabel("     Pan (Ctrl + click-and-drag)"));
-		controls.add(new JLabel("     Zoom (Ctrl + scroll) <- Not Pinch!"));
+		controls.add(new JLabel("     Zoom (Ctrl + scroll) "));
+		controls.add(new JLabel("               (Not pinch, two-finger scroll rather)"));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("Deal with mistakes:"));

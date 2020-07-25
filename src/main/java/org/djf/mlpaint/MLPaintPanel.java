@@ -63,7 +63,7 @@ public class MLPaintPanel extends JComponent
 
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.00001;
-	public static final int DEFAULT_DIJSKTRA_GROWTH = 26;
+	public static final int DEFAULT_DIJSKTRA_GROWTH = 16;
 	public static final int INTERIOR_STEPS = 10; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
 	public static int dijkstraGrowth = DEFAULT_DIJSKTRA_GROWTH;
 
@@ -470,20 +470,6 @@ public class MLPaintPanel extends JComponent
 		g2.drawImage(visLabels, 0, 0, null);
 		//t = reportTime(t, "Labels drawn via affine transform and alpha-painted area.");
 
-		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
-			g2.setColor(FRESH_COLORS[FRESH_POS] );
-			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				g2.drawRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
-			}
-			g2.setColor(BACKDROP_COLORS[FRESH_POS]);
-			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
-				g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
-			}
-		//	t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
-		}
-
-
 
 		// add frame to see limit, even if indistinguishable from background
 		g2.setColor(Color.BLACK);
@@ -506,6 +492,18 @@ public class MLPaintPanel extends JComponent
 		}
 		//t = reportTime(t, "cross hatched fresh paint drawn");
 
+		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
+			g2.setColor(FRESH_COLORS[FRESH_POS] );
+			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
+				g2.drawRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+			}
+			g2.setColor(BACKDROP_COLORS[FRESH_POS]);
+			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
+				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
+				g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+			}
+		//	t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
+		}
 		if (undoInProgress) {
 			undoInProgress = false;
 		}
@@ -1116,7 +1114,7 @@ public class MLPaintPanel extends JComponent
 		System.out.println("Grow suggestion was called.\n");
 		if (queueBoundsIdx < 0) return;
 		queueBoundsIdx += 1;
-		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "I can't imagine how growSuggestion is more than queue size, except speed issue.");
+		Preconditions.checkArgument(!(listQueues.size() < queueBoundsIdx), "You will need select-paint, not avoid-paint alone.");
 		if (listQueues.size() == queueBoundsIdx) {
 			System.out.printf("Here is our spare classifier: %s",spareClassifier);
 			if (spareClassifier != null) {
