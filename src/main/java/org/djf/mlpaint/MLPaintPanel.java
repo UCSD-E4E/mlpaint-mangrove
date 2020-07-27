@@ -85,6 +85,7 @@ public class MLPaintPanel extends JComponent
 	public boolean noRelabel = true;
 	private static final int UNDO_MEM = 20;
 	private boolean undoInProgress = false;
+	private boolean isPaintPreDelete = false;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
 
 	public boolean safeToSave = true;
@@ -396,6 +397,10 @@ public class MLPaintPanel extends JComponent
 	}
 	private void brushFreshPaintIndex(MouseEvent e, int index) {
 		long t = System.currentTimeMillis();
+		if (isPaintPreDelete) {
+			initializeFreshPaint();
+			isPaintPreDelete = false;
+		}
 		Point2D mousePoint = new Point2D.Double((double) e.getX(), (double) e.getY());
 		Ellipse2D brush = new Ellipse2D.Double(
 				e.getX() - brushRadius, 
@@ -476,33 +481,34 @@ public class MLPaintPanel extends JComponent
 		g2.drawRect(0, 0, width, height);
 		//t = reportTime(t, "Pretty frame drawn.");
 
-		//Draw the fresh paint.
-		IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
-		if (false) {
-			g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
-			g2.fill(freshPaintArea);
-			g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
-			g2.fill(antiPaintArea);
-			//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
-		//	t = reportTime(t, "Fresh paint drawn.");
-		} else {
-
-			crossHatchArea(g2, freshPaintArea, freshPosTexture,  FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS] );
-			crossHatchArea(g2, antiPaintArea, freshNegTexture,   FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
-		}
-		//t = reportTime(t, "cross hatched fresh paint drawn");
-
-		if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >=0) {
-			g2.setColor(FRESH_COLORS[FRESH_POS] );
-			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				g2.drawRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+		if (!isPaintPreDelete) {
+			//Draw the fresh paint.
+			IndexColorModel fresh_cm = (IndexColorModel) freshPaint.getColorModel();
+			if (false) {
+				g2.setColor(new Color(fresh_cm.getRGB(FRESH_POS)));
+				g2.fill(freshPaintArea);
+				g2.setColor(new Color(fresh_cm.getRGB(FRESH_NEG)));
+				g2.fill(antiPaintArea);
+				//g2.drawImage(freshPaint, 0, 0, null);// mostly transparent atop
+				//	t = reportTime(t, "Fresh paint drawn.");
+			} else {
+				crossHatchArea(g2, freshPaintArea, freshPosTexture, FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
+				crossHatchArea(g2, antiPaintArea, freshNegTexture, FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 			}
-			g2.setColor(BACKDROP_COLORS[FRESH_POS]);
-			for (MyPoint edgePoint: listQueues.get(queueBoundsIdx)) {
-				//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
-				g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+			//t = reportTime(t, "cross hatched fresh paint drawn");
+
+			if (listQueues != null && listQueues.size() > queueBoundsIdx && queueBoundsIdx >= 0) {
+				g2.setColor(FRESH_COLORS[FRESH_POS]);
+				for (MyPoint edgePoint : listQueues.get(queueBoundsIdx)) {
+					g2.drawRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+				}
+				g2.setColor(BACKDROP_COLORS[FRESH_POS]);
+				for (MyPoint edgePoint : listQueues.get(queueBoundsIdx)) {
+					//g2.drawRect(edgePoint.x,edgePoint.y,2,2);
+					g2.fillRect(edgePoint.x, edgePoint.y, dijkstraStep, dijkstraStep);
+				}
+				//	t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 			}
-		//	t = reportTime(t, "Dijkstra suggestion outline drawn from priorityQueue.");
 		}
 		if (undoInProgress) {
 			undoInProgress = false;
@@ -1161,7 +1167,7 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 		}
-		initializeFreshPaint();
+		isPaintPreDelete = true; //initializeFreshPaint();
 		repaint();
 		t = reportTime(t, "We wrote the suggestion to labels via distances[][] < threshold & >0.");
 	}
@@ -1311,7 +1317,7 @@ public class MLPaintPanel extends JComponent
 		undoInProgress = true;
 		labels = undoLabels.get(undoLabels.size() -1);
 		undoLabels.remove(undoLabels.size()-1);
-		initializeFreshPaint();
+		isPaintPreDelete = false;
 		visLabels = getDisplayLabels(labels);
 		repaint();
 	}

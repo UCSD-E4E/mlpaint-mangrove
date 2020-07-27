@@ -406,6 +406,7 @@ public class MLPaintApp extends SwingApp {
 		if (rr != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
+		status("This may take a good minute.");
 		directory = jfc.getCurrentDirectory().toPath();
 		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
 
