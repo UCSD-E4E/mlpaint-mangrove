@@ -418,7 +418,7 @@ public class MLPaintApp extends SwingApp {
 
 		xy = new ImageResamplingDims(jfc.getSelectedFiles()[0], maxPixels);
 		if (xy.bigx > 4000 && !alreadyTold) {
-			JOptionPane.showMessageDialog(this, "This may take a moment with no response");
+			JOptionPane.showMessageDialog(this, "This may take a moment while MLPaint is unresponsive.");
 			alreadyTold = true;
 		}
 		directory = jfc.getCurrentDirectory().toPath();
