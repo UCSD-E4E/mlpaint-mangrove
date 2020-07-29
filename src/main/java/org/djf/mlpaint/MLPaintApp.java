@@ -447,12 +447,12 @@ public class MLPaintApp extends SwingApp {
 			//BufferedImage img = ImageIO.read(file);
 			t = reportTime(t, "loaded %s", file.toPath()); //GROK: Why toPath not getAbsolutePath?
 			System.out.println(file.toString());
-			if (MoreFiles.getNameWithoutExtension(file.toPath()).endsWith("_RGB")) {
+			if (MoreFiles.getNameWithoutExtension(file.toPath()).toLowerCase().endsWith("rgb")) {
 				image = setRGBNoAlpha(img);
 				currentImageFile = file.toPath();
 				//currentImageMetadata = metadata;
 				//System.out.print(metadata);
-			} else if (MoreFiles.getNameWithoutExtension(file.toPath()).endsWith("_labels")) {
+			} else if (MoreFiles.getNameWithoutExtension(file.toPath()).toLowerCase().endsWith("labels")) {
 				labels = img;
 				labelsFile = file.toPath();
 				currentLabelsMetadata = metadata;
@@ -496,7 +496,7 @@ public class MLPaintApp extends SwingApp {
 		// For now: compressed TIFF is good
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile).replace("_RGB", "_labels") + extension;
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintlabels" + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
 		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
