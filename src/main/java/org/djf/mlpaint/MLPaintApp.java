@@ -39,6 +39,8 @@ public class MLPaintApp extends SwingApp {
 
 	private Path currentImageFile;
 
+	private boolean alreadyTold = false;
+
 	/** magic label paint panel that holds the secret sauce */
 	private MLPaintPanel mlp = new MLPaintPanel();
 
@@ -413,14 +415,18 @@ public class MLPaintApp extends SwingApp {
 		if (rr != JFileChooser.APPROVE_OPTION) {
 			return;
 		}
-		status("This may take a good minute.");
+
+		xy = new ImageResamplingDims(jfc.getSelectedFiles()[0], maxPixels);
+		if (xy.bigx > 4000 && !alreadyTold) {
+			JOptionPane.showMessageDialog(this, "This may take a moment with no response");
+			alreadyTold = true;
+		}
 		directory = jfc.getCurrentDirectory().toPath();
 		storeDirectory(MLPaintApp.class);// remember it for future runs of the program
 
 
 		// 1. determine image dimensions on disk via Util.readImageDimensions
 		// 2. If too big to load, determine how much down-sampling:  2x2?  3x3? 4x4?
-		xy = new ImageResamplingDims(jfc.getSelectedFiles()[0], maxPixels);
 		boolean consistent = SwingUtil.isSameDimensions(xy.bigDim, jfc.getSelectedFiles());
 		if (!consistent) {
 			status("Not all the selected images had the same dimensions.");
