@@ -61,10 +61,12 @@ public class MLPaintApp extends SwingApp {
 	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
 
-	private ActionTracker enter = new ActionTracker("Accept suggestion as mangrove (Enter)| ENTER",
+	private ActionTracker enter = new ActionTracker("Accept auto-selection as positive (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
-	private ActionTracker space = new ActionTracker("Accept suggestion as non-mangrove (Space)| SPACE",
+	private ActionTracker space = new ActionTracker("Accept auto-selection as negative (Space)| SPACE",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
+	private ActionTracker ctrl0 = new ActionTracker("Accept auto-selection as unlabeled (Ctrl-U)|control U",
+			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
 	private ActionTracker save = new ActionTracker("Save labels in image directory (Ctrl-S)|control S", this::saveLabels);
@@ -81,8 +83,6 @@ public class MLPaintApp extends SwingApp {
 																										});
 
 	//Less interesting abstract actions
-	private ActionTracker ctrl0 = new ActionTracker("Accept suggestion as unlabeled|control 0",
-			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
 	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (click any digit 1-9)",   (name,ev) -> {
 		setBrush('4');
 	});
@@ -172,7 +172,7 @@ public class MLPaintApp extends SwingApp {
 		Box controls = Box.createVerticalBox();
 		controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		controls.add(new JSeparator());
+//		controls.add(new JSeparator());
 //		controls.add(new JLabel("Setup:"));
 //		controls.add(setupLink);
 //
@@ -182,7 +182,7 @@ public class MLPaintApp extends SwingApp {
 		controls.add(documentationLink);
 		controls.add(new JSeparator());
 
-		controls.add(new JLabel("1. Choose a region to label as mangrove or not."));
+		controls.add(new JLabel("1. Choose a region to label."));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("2. Brush on select-paint and avoid-paint."));
@@ -199,7 +199,7 @@ public class MLPaintApp extends SwingApp {
 		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
 		b.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
 
-		controls.add(new JLabel("  "));
+		//controls.add(new JLabel("  "));
 		controls.add(a); controls.add(a1); controls.add(a2);
 		controls.add(b);
 		controls.add(b1);
@@ -240,7 +240,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoBox(controls, minus.keyStroke, minus.action);
 
 		controls.add(new JLabel("  "));
-		JLabel sliderText = new JLabel("Paintbrush size: (hover for keyboard shortcuts)");
+		JLabel sliderText = new JLabel("Brush size--Shrink & grow (A)&(S)--Set (1)-(9)");
 		sliderText.setToolTipText(sliderHoverText);
 		controls.add(sliderText);
 		controls.add(brushRadiusSlider);
@@ -271,12 +271,13 @@ public class MLPaintApp extends SwingApp {
 
 		enter.addAsButton(controls);
 		space.addAsButton(controls);
+		ctrl0.addAsButton(controls);
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("5. Move to the next spot."));
 		controls.add(new JLabel("     Pan (Ctrl + click-and-drag)"));
-		controls.add(new JLabel("     Zoom (Ctrl + scroll) "));
-		controls.add(new JLabel("               (Not pinch, two-finger scroll rather)"));
+		controls.add(new JLabel("               (Or middle mouse button drag)"));
+		controls.add(new JLabel("     Zoom (Two-finger scroll)  --Not pinch"));
 		controls.add(new JSeparator());
 
 		controls.add(new JLabel("Deal with mistakes:"));
@@ -362,29 +363,30 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Refresh", (name,ev) -> refresh()),
 				null);
 
-		JMenu label = newMenu("Label",
-				//digit.menuItem,
-				//		null,
-						ctrl0.menuItem,
-						null,
-//						right.menuItem,
-//						left.menuItem,
+//		JMenu label = newMenu("Label",
+//				//digit.menuItem,
+//				//		null,
+//						ctrl0.menuItem,
 //						null,
-//						up.menuItem,
-//						down.menuItem,
-//						null,
-				null);
+////						right.menuItem,
+////						left.menuItem,
+////						null,
+////						up.menuItem,
+////						down.menuItem,
+////						null,
+//				null);
 
 
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
 		JLabel proviso = new JLabel("                                                   " +
-				"         If used for commercial or academic work, please contact davidf4983@gmail.com for attribution.");
+											"                                                   "+
+				"If used for commercial or academic work, please contact davidf4983@gmail.com for attribution.");
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
 		rr.add(view);
-		rr.add(label);
+//		rr.add(label);
 		rr.add(proviso);
 		return rr;
 	}
@@ -400,6 +402,7 @@ public class MLPaintApp extends SwingApp {
 		JFileChooser jfc = new JFileChooser();
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
+		jfc.setPreferredSize(new Dimension(800,400));
 
 		// currently the user selects all the layers to load
 		// MAYDO: instead, the user could just select the main file,
