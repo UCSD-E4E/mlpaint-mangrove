@@ -475,6 +475,8 @@ public class MLPaintApp extends SwingApp {
 			currentImageFile = labelsFile;
 		}
 		if (image == null) {
+			JOptionPane.showMessageDialog(this,
+					"MLPaint depend on filename--2 files: one filename must end in \"rgb\" OR \"labels\"; 3 files: one must end in \"rgb\".");
 			throw new IllegalArgumentException("Must provide the _RGB image");// appears in status bar in red
 		}
 		// My original design REPLACED the mlp, but it was forever not re-painting.
