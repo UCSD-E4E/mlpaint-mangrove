@@ -96,8 +96,8 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker digitEight = 		new ActionTracker("Set brush size to 8 |8",   (name,ev) -> setBrush('8'));
 	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |9",   (name,ev) -> setBrush('9'));
 
-	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | W", (name,ev) -> adjustPower(+0.25));
-	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | Q", (name, ev) -> adjustPower(-0.25));
+	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | alt W", (name,ev) -> adjustPower(+0.25));
+	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | alt Q", (name, ev) -> adjustPower(-0.25));
 
 	private SwingLink workflowLink = new SwingLink("   An Intro to the MLPaint Labeling Workflow ",
 			"https://www.youtube.com/watch?v=m0N1C22AFdc");
@@ -236,6 +236,9 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoBox(controls, up.keyStroke, up.action);
 		SwingUtil.putActionIntoBox(controls, down.keyStroke, down.action);
 
+		SwingUtil.putActionIntoBox(controls, plus.keyStroke, plus.action);
+		SwingUtil.putActionIntoBox(controls, minus.keyStroke, minus.action);
+
 		controls.add(new JLabel("  "));
 		JLabel sliderText = new JLabel("Paintbrush size: (hover for keyboard shortcuts)");
 		sliderText.setToolTipText(sliderHoverText);
@@ -370,18 +373,19 @@ public class MLPaintApp extends SwingApp {
 //						up.menuItem,
 //						down.menuItem,
 //						null,
-						plus.menuItem,
-						minus.menuItem,
 				null);
 
 
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
+		JLabel proviso = new JLabel("                                                   " +
+				"         If used for commercial or academic work, please contact davidf4983@gmail.com for attribution.");
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
 		rr.add(view);
 		rr.add(label);
+		rr.add(proviso);
 		return rr;
 	}
 

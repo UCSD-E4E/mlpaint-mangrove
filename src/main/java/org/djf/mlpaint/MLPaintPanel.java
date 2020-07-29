@@ -61,7 +61,6 @@ public class MLPaintPanel extends JComponent
 	private static final TexturePaint freshPosTexture = getTexturePaint( FRESH_COLORS[FRESH_POS], BACKDROP_COLORS[FRESH_POS]);
 	private static final TexturePaint freshNegTexture = getTexturePaint( FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 
-
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.00001;
 	public static final int DEFAULT_DIJSKTRA_GROWTH = 16;
 	public static final int INTERIOR_STEPS = 10; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
@@ -248,7 +247,7 @@ public class MLPaintPanel extends JComponent
 	@Override
 	public void mouseDragged(MouseEvent e) {
 		//System.out.printf("MouseDrag %s\n", e.toString());
-		if (e.isControlDown()) {
+		if (e.isControlDown() || e.getButton() == MouseEvent.BUTTON3) {
 			// pan the image
 			System.out.println("Dragging.");
 			double dx = e.getPoint().getX() - mousePrev.getPoint().getX();
@@ -355,7 +354,7 @@ public class MLPaintPanel extends JComponent
 		d = -d;
 		double scale = Math.pow(1.05, d);// scale +/- 5% per step, exponential
 		
-		if (e.isControlDown()) {
+		if (true) {
 			// zooms at mouse point
 			view.preConcatenate(AffineTransform.getTranslateInstance(-x, -y));
 			view.preConcatenate(AffineTransform.getScaleInstance(scale, scale));
