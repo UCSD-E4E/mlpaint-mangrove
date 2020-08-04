@@ -62,8 +62,8 @@ public class MLPaintPanel extends JComponent
 	private static final TexturePaint freshNegTexture = getTexturePaint( FRESH_COLORS[FRESH_NEG], BACKDROP_COLORS[FRESH_NEG]);
 
 	private static final double EDGE_DISTANCE_FRESH_POS = 0.00001;
-	public static final int DEFAULT_DIJSKTRA_GROWTH = 16;
-	public static final int INTERIOR_STEPS = 10; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
+	public static final int DEFAULT_DIJSKTRA_GROWTH = 40;
+	public static final int INTERIOR_STEPS = 20; //Interior steps should be less than or equal to DEFAULT_DIJKSTRA_GROWTH
 	public static int dijkstraGrowth = DEFAULT_DIJSKTRA_GROWTH;
 
 	/** current RGB image (possibly huge) in "world coordinates" */
@@ -924,7 +924,7 @@ public class MLPaintPanel extends JComponent
 			growDijkstra(repsIncrement);
 		}
 		for (int i = INTERIOR_STEPS; i<queueBoundsIdx; i++) {
-			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,i- INTERIOR_STEPS)*0.02);
+			repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.01,i- INTERIOR_STEPS)*0.01);
 			growDijkstra(repsIncrement);
 		}
 		t = reportTime(t, "Initialized Dijkstra with 20 growDijkstras.");
@@ -1132,7 +1132,7 @@ public class MLPaintPanel extends JComponent
 				}
 			}
 
-			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.02,queueBoundsIdx-1- INTERIOR_STEPS)*0.02);
+			int repsIncrement = (int) (freshPaintNumPositives*Math.pow(1.01,queueBoundsIdx-1- INTERIOR_STEPS)*0.01);
 			growDijkstra(repsIncrement);
 		}
 		repaint();

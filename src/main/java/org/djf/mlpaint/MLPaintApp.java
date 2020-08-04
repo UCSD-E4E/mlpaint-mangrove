@@ -111,7 +111,7 @@ public class MLPaintApp extends SwingApp {
 	/*main passes this function into the EDT TODO: check that*/
 	private MLPaintApp() {
 		super();
-		setTitle("ML Paint, version 2020.07.21 Beta Internal Release");// update version number periodically   //Superclass somewhere above swingApp
+		setTitle("ML Paint, version 1.0, 2020.08.04");// update version number periodically   //Superclass somewhere above swingApp
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
 		makeContent();												// MLPaintApp method
 		makeBehavior();												// MLPaintApp method
