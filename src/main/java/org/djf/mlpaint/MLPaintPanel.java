@@ -82,7 +82,7 @@ public class MLPaintPanel extends JComponent
 	private BufferedImage visLabels;
 	/** clients can toggle this property and we automatically re-initDijkstra */
 	public boolean noRelabel = true;
-	private static final int UNDO_MEM = 20;
+	private static final int UNDO_MEM = 10;
 	private boolean undoInProgress = false;
 	private boolean isPaintPreDelete = false;
 	private List<BufferedImage> undoLabels = Lists.newArrayListWithCapacity(UNDO_MEM);
