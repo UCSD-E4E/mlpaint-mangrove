@@ -44,10 +44,20 @@ public class MLPaintPanel extends JComponent
 
 	// *label image* pixel index codes  (future: up to 255 if we need many different label values)
 	public static final int UNLABELED = 0;//0;//255; //Question: Should we put an alpha mask on the permanent labels?
-	public static final int POSITIVE = 3;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
-	public static final int NEGATIVE = 2;//2;// 0;
-	public static final int NO_DATA = 1;//1;//254;
-	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY};
+	public static final int POSITIVE = 2;//3;//100; // Clear NO_DATA, Clear UNLABELED_, grays for positive and negative.
+	public static final int NEGATIVE = 1;//2;// 0;
+	public static final int NO_DATA = 15;//1;//254;
+
+	public static final int CLASS_3 = 3; public static final int CLASS_4 = 4; public static final int CLASS_5 = 5;
+	public static final int CLASS_6 = 6; public static final int CLASS_7 = 7; public static final int CLASS_8 = 8;
+	public static final int CLASS_9 = 9; public static final int CLASS_10 = 10; public static final int CLASS_11 = 11;
+	public static final int CLASS_12 = 12; public static final int CLASS_13 = 13; public static final int CLASS_14 = 14;
+	public static final Color[] LABEL_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.ALPHABLACK, SwingUtil.ALPHAGRAY,
+												SwingUtil.ALPHAGREEN, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHASKYBLUE, SwingUtil.ALPHADULLBLUE,
+												SwingUtil.ALPHAMAGENTA, SwingUtil.ALPHAPURPLE, SwingUtil.ALPHAREDPINK, SwingUtil.ALPHAORANGE,
+												SwingUtil.ALPHACYAN, SwingUtil.ALPHAPINK, SwingUtil.ALPHAGOLD, SwingUtil.ALPHAGREENYELLOW,
+											SwingUtil.BACKGROUND_GRAY, };
+
 	public static final Color[] LABEL_ETCH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.lightGray};//I think it's important that
 	public static final Color[] LABEL_HIGHLIGHTS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.lightGray, Color.BLACK};// etch and highlight be same colors
 	// possibly up to 16 different labels, as needed, with more colors
@@ -1244,7 +1254,11 @@ public class MLPaintPanel extends JComponent
 		if (PosNegUnCode != POSITIVE && PosNegUnCode != NEGATIVE && PosNegUnCode != NO_DATA && PosNegUnCode != UNLABELED) {
 			//System.out.println("This is probably an error. \n" +
 			//		"You may have called visLabelPointPosNegData for unlabeled.");
-			return;
+			if (PosNegUnCode%2 == 0) {
+				PosNegUnCode = NEGATIVE;
+			} else {
+				PosNegUnCode = POSITIVE;
+			}
 		}
 
 		int diagonalSize = 9;

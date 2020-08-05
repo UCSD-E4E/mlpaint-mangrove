@@ -45,6 +45,20 @@ public class SwingUtil {
 	public static final Color SKYRED = new Color(255, 119, 54);
 	public static final Color BACKGROUND_GRAY = new Color(238,238,238);
 
+	public static final Color ALPHASKYBLUE = new Color(0.2f, 0.8f, 0.9f, .3f);
+	public static final Color ALPHADULLBLUE = new Color(0.3f, 0.3f, 0.9f, .3f);
+	public static final Color ALPHAMAGENTA = new Color(1.0f, 0.2f, 1.0f, .3f);
+	public static final Color ALPHAPURPLE = new Color(.5f, .1f, 1.0f, .3f);
+
+	public static final Color ALPHAREDPINK = new Color(1.0f, 0.0f, 0.3f, .3f);
+	public static final Color ALPHAORANGE = new Color(1.0f, 0.5f, 0.0f, .3f);
+	public static final Color ALPHACYAN = new Color(0.1f, 1.0f, 0.5f, .3f);
+	public static final Color ALPHAPINK = new Color(1.0f, .5f, 1.0f, .3f);
+
+	public static final Color ALPHAGOLD= new Color(1.0f, 0.8f, 0.1f, .3f);
+	public static final Color ALPHAGREENYELLOW = new Color(1.0f, 1.0f, 0.05f, .3f);
+
+
 	/** new BufferedImage with TYPE_BYTE_BINARY with 1, 2, or 4 bits-per-pixel, depending on # colors offered */
 	public static BufferedImage newBinaryImage(int width, int height, Color... colors) {
 		Preconditions.checkArgument(colors.length <= 16, "Colors.length must be <= 16");

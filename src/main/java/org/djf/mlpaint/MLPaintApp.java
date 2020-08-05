@@ -69,6 +69,20 @@ public class MLPaintApp extends SwingApp {
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 	private ActionTracker ctrl0 = new ActionTracker("Accept auto-selection as unlabeled (Ctrl-U)|control U",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
+	private ActionTracker c1 = new ActionTracker("Accept auto-selection as class 1 ('negative')| SPACE", (name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
+	private ActionTracker c2 = new ActionTracker("Accept auto-selection as class 2 ('positive')| ENTER", (name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE));
+	private ActionTracker c3 = new ActionTracker("Accept auto-selection as class 3|I", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_3));
+	private ActionTracker c4 = new ActionTracker("Accept auto-selection as class 4|O", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_4));
+	private ActionTracker c5 = new ActionTracker("Accept auto-selection as class 5|P", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_5));
+	private ActionTracker c6 = new ActionTracker("Accept auto-selection as class 6|OPEN_BRACKET", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_6));
+	private ActionTracker c7 = new ActionTracker("Accept auto-selection as class 7|J", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_7));
+	private ActionTracker c8 = new ActionTracker("Accept auto-selection as class 8|K", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_8));
+	private ActionTracker c9 = new ActionTracker("Accept auto-selection as class 9|L", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_9));
+	private ActionTracker c10 = new ActionTracker("Accept auto-selection as class 10|SEMICOLON", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_10));
+	private ActionTracker c11 = new ActionTracker("Accept auto-selection as class 11|N", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_11));
+	private ActionTracker c12 = new ActionTracker("Accept auto-selection as class 12|M", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_12));
+	private ActionTracker c13 = new ActionTracker("Accept auto-selection as class 13|COMMA", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_13));
+	private ActionTracker c14 = new ActionTracker("Accept auto-selection as class 14|PERIOD", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_14));
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
 	private ActionTracker save = new ActionTracker("Save labels in image directory (Ctrl-S)|control S", this::saveLabels);
@@ -365,18 +379,21 @@ public class MLPaintApp extends SwingApp {
 				newMenuItem("Refresh", (name,ev) -> refresh()),
 				null);
 
-//		JMenu label = newMenu("Label",
-//				//digit.menuItem,
-//				//		null,
-//						ctrl0.menuItem,
+		JMenu label = newMenu("Labels",
+				//digit.menuItem,
+				//		null,
+
+						enter.menuItem,
+								space.menuItem,
+								ctrl0.menuItem,
+						null,
+//						right.menuItem,
+//						left.menuItem,
 //						null,
-////						right.menuItem,
-////						left.menuItem,
-////						null,
-////						up.menuItem,
-////						down.menuItem,
-////						null,
-//				null);
+//						up.menuItem,
+//						down.menuItem,
+//						null,
+				null);
 
 
 		// PAGE_UP/PAGE_DOWN keys
