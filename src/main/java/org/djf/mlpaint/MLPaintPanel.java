@@ -28,6 +28,7 @@ import com.google.common.collect.Streams;
 
 import org.djf.util.Utils;
 import smile.classification.LogisticRegression;
+import smile.classification.RandomForest;
 import smile.classification.SoftClassifier;
 
 import static org.djf.util.SwingApp.reportTime;
@@ -56,7 +57,7 @@ public class MLPaintPanel extends JComponent
 												SwingUtil.ALPHAGREEN, SwingUtil.ALPHAYELLOW, SwingUtil.ALPHASKYBLUE, SwingUtil.ALPHADULLBLUE,
 												SwingUtil.ALPHAMAGENTA, SwingUtil.ALPHAPURPLE, SwingUtil.ALPHAREDPINK, SwingUtil.ALPHAORANGE,
 												SwingUtil.ALPHACYAN, SwingUtil.ALPHAPINK, SwingUtil.ALPHAGOLD, SwingUtil.ALPHAGREENYELLOW,
-											SwingUtil.BACKGROUND_GRAY, };
+											SwingUtil.BACKGROUND_GRAY };
 
 	public static final Color[] LABEL_ETCH_COLORS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.BLACK, Color.lightGray};//I think it's important that
 	public static final Color[] LABEL_HIGHLIGHTS = {SwingUtil.TRANSPARENT, SwingUtil.BACKGROUND_GRAY, Color.lightGray, Color.BLACK};// etch and highlight be same colors
@@ -621,7 +622,8 @@ public class MLPaintPanel extends JComponent
 		if (isPULearning) {
 			t = reportTime(t, "prepared for PU classifier training");
 			maxIters = 35;
-			SoftClassifier<double[]> finalClassifier = LogisticRegression.fit(fvs, ylabels, lambda, tolerance, maxIters); // Maybe try positive-unlabeled training.
+			SoftClassifier<double[]> finalClassifier = new RandomForest(fvs, ylabels, 30);
+//			SoftClassifier<double[]> finalClassifier = new LogisticRegression(fvs, ylabels, lambda, tolerance, maxIters); // Maybe try positive-unlabeled training.
 			// classifier = SVM.fit(fvs, ylabels, C, tolerance);
 			// classifier = LDA.fit(fvs, ylabels, new double[] {0.5, 0.5}, tolerance);
 			t = reportTime(t, "trained classifier: %d rows x %d features, %.1f%% positive",
@@ -648,7 +650,8 @@ public class MLPaintPanel extends JComponent
 			t = reportTime(t, "prepared for real classifier training");
 		}
 		maxIters = 100;
-		SoftClassifier<double[]> classifier = LogisticRegression.fit(fvs, ylabels, lambda , tolerance, maxIters);
+//		SoftClassifier<double[]> classifier = new LogisticRegression(fvs, ylabels, lambda , tolerance, maxIters);
+		SoftClassifier<double[]> classifier = new RandomForest(fvs, ylabels, 30);
 		t = reportTime(t, "trained real classifier: %d rows x %d features, %.1f%% positive",
 				nall, nFeatures, 100.0 * npos / nall);
 		return classifier;

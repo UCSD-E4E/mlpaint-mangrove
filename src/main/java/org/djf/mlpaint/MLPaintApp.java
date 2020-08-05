@@ -383,10 +383,15 @@ public class MLPaintApp extends SwingApp {
 				//digit.menuItem,
 				//		null,
 
-						enter.menuItem,
-								space.menuItem,
+
 								ctrl0.menuItem,
 						null,
+							c1.menuItem, c2.menuItem, c3.menuItem, c4.menuItem,
+							c5.menuItem, c6.menuItem, c7.menuItem, c8.menuItem,
+							c9.menuItem, c10.menuItem, c11.menuItem, c12.menuItem,
+							c13.menuItem, c14.menuItem,
+
+
 //						right.menuItem,
 //						left.menuItem,
 //						null,
@@ -399,13 +404,13 @@ public class MLPaintApp extends SwingApp {
 		// PAGE_UP/PAGE_DOWN keys
 		// https://docs.oracle.com/javase/8/docs/api/java/awt/event/KeyEvent.html#VK_PAGE_UP
 		JLabel proviso = new JLabel("                                                   " +
-											"                                                   "+
+											"                                        "+
 				"If used for commercial or academic work, please contact davidf4983@gmail.com for attribution.");
 
 		JMenuBar rr = new JMenuBar();
 		rr.add(file);
 		rr.add(view);
-//		rr.add(label);
+		rr.add(label);
 		rr.add(proviso);
 		return rr;
 	}
