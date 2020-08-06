@@ -53,6 +53,9 @@ public class MLPaintApp extends SwingApp {
 			(int) (mlp.radiusFromChDigit('4')*10));
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
+	private JCheckBoxMenuItem resizeVisuals = new JCheckBoxMenuItem("Adjust paint for small image", false);
+	private JCheckBoxMenuItem highlightUnlabeled = new JCheckBoxMenuItem("Highlight unlabeled regions", false);
+
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
 	private AbstractAction lock = newAction("Lock accepted labels against change.", (name,ev) -> lockLabels());
@@ -71,18 +74,21 @@ public class MLPaintApp extends SwingApp {
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.UNLABELED));
 	private ActionTracker c1 = new ActionTracker("Accept auto-selection as class 1 ('negative')| SPACE", (name,ev) -> mlp.writeSuggestionToLabels(mlp.NEGATIVE));
 	private ActionTracker c2 = new ActionTracker("Accept auto-selection as class 2 ('positive')| ENTER", (name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE));
-	private ActionTracker c3 = new ActionTracker("Accept auto-selection as class 3|I", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_3));
-	private ActionTracker c4 = new ActionTracker("Accept auto-selection as class 4|O", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_4));
-	private ActionTracker c5 = new ActionTracker("Accept auto-selection as class 5|P", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_5));
-	private ActionTracker c6 = new ActionTracker("Accept auto-selection as class 6|OPEN_BRACKET", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_6));
-	private ActionTracker c7 = new ActionTracker("Accept auto-selection as class 7|J", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_7));
-	private ActionTracker c8 = new ActionTracker("Accept auto-selection as class 8|K", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_8));
-	private ActionTracker c9 = new ActionTracker("Accept auto-selection as class 9|L", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_9));
-	private ActionTracker c10 = new ActionTracker("Accept auto-selection as class 10|SEMICOLON", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_10));
-	private ActionTracker c11 = new ActionTracker("Accept auto-selection as class 11|N", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_11));
-	private ActionTracker c12 = new ActionTracker("Accept auto-selection as class 12|M", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_12));
-	private ActionTracker c13 = new ActionTracker("Accept auto-selection as class 13|COMMA", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_13));
-	private ActionTracker c14 = new ActionTracker("Accept auto-selection as class 14|PERIOD", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_14));
+	private ActionTracker c3 = new ActionTracker("Accept auto-selection as class 3|3", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_3));
+	private ActionTracker c4 = new ActionTracker("Accept auto-selection as class 4|4", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_4));
+	private ActionTracker c5 = new ActionTracker("Accept auto-selection as class 5|5", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_5));
+	private ActionTracker c6 = new ActionTracker("Accept auto-selection as class 6|6", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_6));
+	private ActionTracker c7 = new ActionTracker("Accept auto-selection as class 7|7", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_7));
+	private ActionTracker c8 = new ActionTracker("Accept auto-selection as class 8|8", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_8));
+	private ActionTracker c9 = new ActionTracker("Accept auto-selection as class 9|9", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_9));
+	private ActionTracker c10 = new ActionTracker("Accept auto-selection as class 10|0", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_10));
+	private ActionTracker c11 = new ActionTracker("Accept auto-selection as class 11|control 1", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_11));
+	private ActionTracker c12 = new ActionTracker("Accept auto-selection as class 12|control 2", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_12));
+	private ActionTracker c13 = new ActionTracker("Accept auto-selection as class 13|control 3", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_13));
+	private ActionTracker c14 = new ActionTracker("Accept auto-selection as class 14|control 4", (name,ev) -> mlp.writeSuggestionToLabels(mlp.CLASS_14));
+
+	private ActionTracker noData = new ActionTracker("Block off regions of selected color as no data|control N", (name,ev) -> mlp.getNoData());
+
 
 	private ActionTracker undo = new ActionTracker("Undo accepted label (Ctrl-Z)|control Z", (name, ev) -> mlp.undo());
 	private ActionTracker save = new ActionTracker("Save labels in image directory (Ctrl-S)|control S", this::saveLabels);
@@ -91,10 +97,10 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker right = 		new ActionTracker("Grow auto-selection (X)|X", (name,ev) -> mlp.growSuggestion());
 	private ActionTracker left = 		new ActionTracker("Shrink auto-selection (Z)|Z", (name,ev) -> mlp.shrinkSuggestion());
 
-	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> { double b = mlp.multiplyBrushRadius(1.15);
+	private ActionTracker up = 		new ActionTracker("Bigger brush (S)|S",    (name,ev) -> { double b = mlp.multiplyBrushRadius(1.3);
 																										brushRadiusSlider.setValue((int) (b*10));
 																										});
-	private ActionTracker down = 		new ActionTracker("Smaller brush (A)|A", (name,ev) -> {double b = mlp.multiplyBrushRadius(1.0/1.15);
+	private ActionTracker down = 		new ActionTracker("Smaller brush (A)|A", (name,ev) -> {double b = mlp.multiplyBrushRadius(1.0/1.3);
 																										brushRadiusSlider.setValue((int) (b*10));
 																										});
 
@@ -102,7 +108,7 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker digit = 		new ActionTracker("Set brush size to __ (click any digit 1-9)",   (name,ev) -> {
 		setBrush('4');
 	});
-	private ActionTracker digitOne = 		new ActionTracker("Set brush size to 1 |1",   (name,ev) -> setBrush('1'));
+	private ActionTracker digitOne = 		new ActionTracker("Set brush size to 1 |D",   (name,ev) -> setBrush('1'));
 	private ActionTracker digitTwo = 		new ActionTracker("Set brush size to 2 |2",   (name,ev) -> setBrush('2'));
 	private ActionTracker digitThree = 		new ActionTracker("Set brush size to 3 |3",   (name,ev) -> setBrush('3'));
 	private ActionTracker digitFour = 		new ActionTracker("Set brush size to 4 |4",   (name,ev) -> setBrush('4'));
@@ -110,7 +116,7 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker digitSix = 		new ActionTracker("Set brush size to 6 |6",   (name,ev) -> setBrush('6'));
 	private ActionTracker digitSeven = 		new ActionTracker("Set brush size to 7 |7",   (name,ev) -> setBrush('7'));
 	private ActionTracker digitEight = 		new ActionTracker("Set brush size to 8 |8",   (name,ev) -> setBrush('8'));
-	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |9",   (name,ev) -> setBrush('9'));
+	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |F",   (name,ev) -> setBrush('9'));
 
 	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | alt W", (name,ev) -> adjustPower(+0.25));
 	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | alt Q", (name, ev) -> adjustPower(-0.25));
@@ -240,13 +246,13 @@ public class MLPaintApp extends SwingApp {
 		brushRadiusSlider.addChangeListener(new BrushSliderListener());
 
 		SwingUtil.putActionIntoBox(controls, digitOne.keyStroke, digitOne.action);
-		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
-		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
-		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
-		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
-		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
-		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
-		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
+//		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
+//		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
+//		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
+//		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
+//		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
+//		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
+//		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
 		SwingUtil.putActionIntoBox(controls, digitNine.keyStroke, digitNine.action);
 
 		SwingUtil.putActionIntoBox(controls, up.keyStroke, up.action);
@@ -256,7 +262,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoBox(controls, minus.keyStroke, minus.action);
 
 		controls.add(new JLabel("  "));
-		JLabel sliderText = new JLabel("Brush size--Shrink & grow (A)&(S)--Set (1)-(9)");
+		JLabel sliderText = new JLabel("Brush size--Shrink & grow (A)&(S)--Set (D)&(F)");
 		sliderText.setToolTipText(sliderHoverText);
 		controls.add(sliderText);
 		controls.add(brushRadiusSlider);
@@ -292,7 +298,7 @@ public class MLPaintApp extends SwingApp {
 
 		controls.add(new JLabel("5. Move to the next spot."));
 		controls.add(new JLabel("     Pan (Ctrl + click-and-drag)"));
-		controls.add(new JLabel("               (Or middle mouse button drag)"));
+//		controls.add(new JLabel("               (Or middle mouse button drag)"));
 		controls.add(new JLabel("     Zoom (Two-finger scroll)  --Not pinch"));
 		controls.add(new JSeparator());
 
@@ -329,6 +335,17 @@ public class MLPaintApp extends SwingApp {
 				mlp.repaint();
 			}
 			status("showClassifier %s  %s", showClassifier.isSelected(), mlp.showClassifierC);
+		});
+
+		resizeVisuals.setAccelerator(KeyStroke.getKeyStroke("control V"));
+		resizeVisuals.addActionListener(event -> {
+			mlp.makeBigger(!resizeVisuals.isSelected());
+		});
+
+		highlightUnlabeled.setAccelerator(KeyStroke.getKeyStroke("control H"));
+		highlightUnlabeled.addActionListener(event -> {
+			mlp.hideLabeled = highlightUnlabeled.isSelected();
+			mlp.repaint();
 		});
 
 	}
@@ -375,6 +392,8 @@ public class MLPaintApp extends SwingApp {
 
 		JMenu view = newMenu("View",
 				showClassifier,
+						resizeVisuals,
+						highlightUnlabeled,
 				newMenuItem("Reset zoom|ESCAPE", (name,ev) -> mlp.resetView()),
 				newMenuItem("Refresh", (name,ev) -> refresh()),
 				null);
@@ -383,7 +402,8 @@ public class MLPaintApp extends SwingApp {
 				//digit.menuItem,
 				//		null,
 
-
+						noData.menuItem,
+						null,
 								ctrl0.menuItem,
 						null,
 							c1.menuItem, c2.menuItem, c3.menuItem, c4.menuItem,
@@ -520,7 +540,7 @@ public class MLPaintApp extends SwingApp {
 		// For now: compressed TIFF is good
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintlabels" + extension;
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
 		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
