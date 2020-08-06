@@ -245,7 +245,7 @@ public class MLPaintPanel extends JComponent
 	public void mousePressed(MouseEvent e) {
 		System.out.printf("MousePress %s\n", e.toString());
 		mousePrev = e;
-		if (e.isControlDown()) {
+		if (e.isControlDown() || e.getButton() == MouseEvent.BUTTON2) {
 			// start dragging to pan the image
 		} else if (e.isAltDown()) {
 			eraseFreshPaint(e);
@@ -260,7 +260,7 @@ public class MLPaintPanel extends JComponent
 	@Override
 	public void mouseDragged(MouseEvent e) {
 		//System.out.printf("MouseDrag %s\n", e.toString());
-		if (e.isControlDown() || e.getButton() == MouseEvent.BUTTON3) {
+		if (e.isControlDown() || e.getButton() == MouseEvent.BUTTON2) {
 			// pan the image
 			System.out.println("Dragging.");
 			double dx = e.getPoint().getX() - mousePrev.getPoint().getX();
@@ -282,7 +282,7 @@ public class MLPaintPanel extends JComponent
 	public void mouseReleased(MouseEvent e) {
 		System.out.printf("MouseRelease %s\n", e.toString());
 		// if it was painting, then extract the training set
-		if (!e.isControlDown() ) {
+		if (!e.isControlDown() && !(e.getButton() == MouseEvent.BUTTON2)) {
 			initAutoSuggest();
 		}
 		mousePrev = null;
