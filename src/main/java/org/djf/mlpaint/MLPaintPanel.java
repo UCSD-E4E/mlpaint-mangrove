@@ -1373,5 +1373,33 @@ public class MLPaintPanel extends JComponent
 		repaint();
 	}
 
+	public void testingCode() {
+		//OK. We have a bit of fresh paint. Now what to we do.
+
+		//1. Have a made "giveaway" binary image. This should be loaded. Check that.
+
+		//2. Disable extraLayers from contributing to feature vector
+
+		//Grow initially.
+		//Save stats
+
+		//For loop:
+			//grow
+			//saveStats: Who knows? Take the suggested area region and find every pixel inside
+					// and calculate accuracy
+					// and calculate surface area
+
+		//There should exist a .tsv file to save a line of results
+		// Save the classifier type
+		// Save the classifier stats
+		// Save the training time possibly (time)
+		// Save the cost function
+		// Save the feature vector used
+		//
+		//Make sure you visualize the labels. See them maybe.
+
+
+	}
+
 
 }

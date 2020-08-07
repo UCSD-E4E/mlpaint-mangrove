@@ -323,12 +323,18 @@ public class MLPaintApp extends SwingApp {
 		return controls;
 	}
 
+
+
+
+
 	private void adjustPower(double v) {
 		mlp.scorePower += v;
 		//Re-start the suggestion
 		mlp.initAutoSuggest();
 		status("Score Power = %.2f", mlp.scorePower);
 	}
+
+
 
 	/** Make further controls beyond makeContent, beyond getting active children to a JFrame */
 	private void makeBehavior() {
@@ -398,8 +404,9 @@ public class MLPaintApp extends SwingApp {
 	 */
 	private JMenuBar makeMenus() {				 						//MAYDO: Allow ctrl and command, maybe ever same
 		JMenu file = newMenu("File",
-				loadHighRes,
+
 				newMenuItem("Open image, labels...|control O", this::openImage),
+				loadHighRes,
 				save.menuItem,
 				newMenuItem("Exit the Program After Saving the Labels", this::exit),
 				null);
