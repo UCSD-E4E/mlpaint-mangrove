@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.Key;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 
@@ -34,7 +35,9 @@ public class MLPaintApp extends SwingApp {
 		SwingUtilities.invokeLater(() -> new MLPaintApp());
 	}
 
-	private static final int maxPixels = (int) Math.pow(2,26); //(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private static int SMALLER_PIXELS = (int) Math.pow(2,23); //(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private static int BIGGER_PIXELS = (int) Math.pow(2,27); //(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
+	private static int maxPixels = BIGGER_PIXELS;
 	private ImageResamplingDims xy;
 
 	private Path currentImageFile;
@@ -55,6 +58,8 @@ public class MLPaintApp extends SwingApp {
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 	private JCheckBoxMenuItem resizeVisuals = new JCheckBoxMenuItem("Adjust paint for small image", false);
 	private JCheckBoxMenuItem highlightUnlabeled = new JCheckBoxMenuItem("Highlight unlabeled regions", false);
+
+	private JCheckBoxMenuItem loadHighRes = new JCheckBoxMenuItem("Load image at lower resolution", false);
 
 
 	//private JCheckBoxMenuItem noRelabel = new JCheckBoxMenuItem("Keep accepted labels locked.", true);
@@ -111,12 +116,12 @@ public class MLPaintApp extends SwingApp {
 	private ActionTracker digitOne = 		new ActionTracker("Set brush size to 1 |D",   (name,ev) -> setBrush('1'));
 	private ActionTracker digitTwo = 		new ActionTracker("Set brush size to 2 |2",   (name,ev) -> setBrush('2'));
 	private ActionTracker digitThree = 		new ActionTracker("Set brush size to 3 |3",   (name,ev) -> setBrush('3'));
-	private ActionTracker digitFour = 		new ActionTracker("Set brush size to 4 |4",   (name,ev) -> setBrush('4'));
+	private ActionTracker digitFour = 		new ActionTracker("Set brush size to 4 |F",   (name,ev) -> setBrush('4'));
 	private ActionTracker digitFive = 		new ActionTracker("Set brush size to 5 |5",   (name,ev) -> setBrush('5'));
 	private ActionTracker digitSix = 		new ActionTracker("Set brush size to 6 |6",   (name,ev) -> setBrush('6'));
 	private ActionTracker digitSeven = 		new ActionTracker("Set brush size to 7 |7",   (name,ev) -> setBrush('7'));
 	private ActionTracker digitEight = 		new ActionTracker("Set brush size to 8 |8",   (name,ev) -> setBrush('8'));
-	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |F",   (name,ev) -> setBrush('9'));
+	private ActionTracker digitNine = 		new ActionTracker("Set brush size to 9 |G",   (name,ev) -> setBrush('9'));
 
 	private ActionTracker plus = 		new ActionTracker("Weight pixel similarity more in suggestion | alt W", (name,ev) -> adjustPower(+0.25));
 	private ActionTracker minus = 		new ActionTracker("Weight distance more in suggestion | alt Q", (name, ev) -> adjustPower(-0.25));
@@ -248,7 +253,7 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoBox(controls, digitOne.keyStroke, digitOne.action);
 //		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
 //		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
-//		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
+		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
 //		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
 //		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
 //		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
@@ -348,6 +353,14 @@ public class MLPaintApp extends SwingApp {
 			mlp.repaint();
 		});
 
+		loadHighRes.addActionListener(event -> {
+			if (loadHighRes.isSelected()) {
+				maxPixels = BIGGER_PIXELS;
+			} else {
+				maxPixels = SMALLER_PIXELS;
+			}
+		});
+
 	}
 
 	private void lockLabels() {
@@ -385,6 +398,7 @@ public class MLPaintApp extends SwingApp {
 	 */
 	private JMenuBar makeMenus() {				 						//MAYDO: Allow ctrl and command, maybe ever same
 		JMenu file = newMenu("File",
+				loadHighRes,
 				newMenuItem("Open image, labels...|control O", this::openImage),
 				save.menuItem,
 				newMenuItem("Exit the Program After Saving the Labels", this::exit),
