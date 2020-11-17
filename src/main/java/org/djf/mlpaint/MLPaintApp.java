@@ -32,7 +32,7 @@ public class MLPaintApp extends SwingApp {
 
 	public static void main(String[] args) {
 		//MAYDO: handle startup arguments on the command line
-		SwingUtilities.invokeLater(() -> new MLPaintApp());
+		SwingUtilities.invokeLater(() -> new MLPaintApp(false));
 	}
 
 	private static int SMALLER_PIXELS = (int) Math.pow(2,23); //(2,26); //(int) Math.pow(2,31) / 4; //Used to be 196,000,000 = 14,000^2 //GROC: Static vs. non-static
@@ -134,7 +134,9 @@ public class MLPaintApp extends SwingApp {
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/#tutorial-loading-an-image-to-label");
 
 	/*main passes this function into the EDT TODO: check that*/
-	private MLPaintApp() {
+	// changed from private
+	
+	 MLPaintApp(boolean testing) {
 		super();
 		setTitle("ML Paint, version 1.0, 2020.08.04");// update version number periodically   //Superclass somewhere above swingApp
 		restoreDirectory(MLPaintApp.class);// remember directory from previous run	//SwingApp method
@@ -144,11 +146,15 @@ public class MLPaintApp extends SwingApp {
 		setSize(1250, 800);// initial width, height  	//JFrame method
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);				// JFrame method
 		setVisible(true);											// JFrame method
-		try {
-			openImage();
-		} catch (IOException e) {
-			//
+		// only open image if not testing
+		if (!testing) {
+			try {
+				openImage();
+			} catch (IOException e) {
+				//
+			}
 		}
+
 	}
 
 	/** Make the control panel boxes with actions within the frame.
@@ -221,6 +227,9 @@ public class MLPaintApp extends SwingApp {
 		JLabel b1 = new JLabel("       -- \"Avoid these pixels.\"");
 		JLabel b2 = new JLabel("       -- \"Try to avoid pixels like these.\"");
 		JLabel c = new JLabel("  Erase-paint: (Alt or Option + click-and-drag)");
+		
+		// test for JUnit
+		a.setName("test");
 
 		Font font = a.getFont();
 		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));

@@ -60,5 +60,15 @@ dependencies {
     // https://mvnrepository.com/artifact/org.gdal/gdal//compile group: 'org.gdal', name: 'gdal', version: '3.1.0'//compile group: 'org.gdal', name: 'gdal', version: '3.1.0'//compile group: 'org.gdal', name: 'gdal', version: '3.1.0', ext: 'pom'//https://gis.stackexchange.com/questions/143998/error-in-using-gdal-java-binding//https://github.com/gradle/gradle/issues/2631
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
+    
+    implementation 'org.assertj:assertj-swing:3.9.2'
+    implementation 'org.assertj:assertj-swing-junit:3.9.2'
+    
 }
 //apply plugin: 'org.openjfx.javafxplugin'
+
+
+test {
+    useJUnit()
+}
+
