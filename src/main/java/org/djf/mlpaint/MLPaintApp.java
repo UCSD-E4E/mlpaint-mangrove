@@ -477,6 +477,8 @@ public class MLPaintApp extends SwingApp {
 		jfc.setDialogTitle("Select your image, any pre-existing labels, and other layers.");
 		jfc.setCurrentDirectory(directory.toFile());
 		jfc.setPreferredSize(new Dimension(800,400));
+		// test for JUnit
+		jfc.setName("opener");
 
 		// currently the user selects all the layers to load
 		// MAYDO: instead, the user could just select the main file,
@@ -568,6 +570,10 @@ public class MLPaintApp extends SwingApp {
 	private void saveLabels() throws IOException {
 		//TODO  figure out exactly how to output for downstream consumption
 		// For now: compressed TIFF is good
+		
+		// if no image, return
+		if (currentImageFile == null) return;
+		
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + extension;
