@@ -51,9 +51,10 @@ public class MLPaintApp extends SwingApp {
 	private IIOMetadata currentLabelsMetadata = null;
 
 
-	JSlider brushRadiusSlider = new JSlider((int) (mlp.radiusFromChDigit('1')*10),
+	JSlider brushRadiusSlider = new JSlider(JSlider.VERTICAL,(int) (mlp.radiusFromChDigit('1')*10),
 			(int) (mlp.radiusFromChDigit('9')*10),
 			(int) (mlp.radiusFromChDigit('4')*10));
+	//JSlider slider = new JSlider(JSlider.VERTICAL,0,100,10);
 
 	private JCheckBoxMenuItem showClassifier = new JCheckBoxMenuItem("Show classifier output", false);
 	private JCheckBoxMenuItem resizeVisuals = new JCheckBoxMenuItem("Adjust paint for small image", false);
@@ -165,28 +166,121 @@ public class MLPaintApp extends SwingApp {
 
 
 		// CENTER
-		//mlp = new MLPaintPanel();
+		mlp = new MLPaintPanel();
 		mlp.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		//add(mlp, BorderLayout.OPEN_CENTER);
+		add(mlp, BorderLayout.CENTER);
 
-		// WEST  (It is important that mlp is initialized first, for the sake of the JSlider.)
-		Box controls = getControlBox();
+//		// WEST  (It is important that mlp is initialized first, for the sake of the JSlider.)
+//		Box controls = getControlBox();
+//
+//		//Create a split pane with the two scroll panes in it.
+//		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+//				controls, mlp);
+//		splitPane.setOneTouchExpandable(true);
+//		splitPane.setDividerLocation(355);
+//
+//		//Provide minimum sizes for the two components in the split pane
+//		Dimension minimumSize = new Dimension(200, 50);
+//		controls.setMinimumSize(minimumSize);
+//		mlp.setMinimumSize(minimumSize);
+//		add(splitPane, BorderLayout.CENTER);
+		
+		//WEST
+		JButton grow = new JButton("grow select");
+		grow.setBounds(0,10,110,25);
+		grow.addActionListener(right.action);
+		mlp.add(grow);
+		
+		JButton shrink = new JButton("shrink select");
+		shrink.setBounds(0,35,110,25);
+		shrink.addActionListener(left.action);
+		mlp.add(shrink);
+		
+		JButton select = new JButton("undo select");
+		select.setBounds(0,60,110,25);
+		select.addActionListener(delete.action);
+		mlp.add(select);
+		
+		
+		JButton label = new JButton("undo label");
+		label.setBounds(0,110,110,25);
+		label.addActionListener(undo.action);
+		mlp.add(label);
+		
+		
+		JButton pos = new JButton("pos");
+		pos.setBounds(0,160,50,25);
+		pos.addActionListener(enter.action);
+		mlp.add(pos);
+		JButton neg = new JButton("neg");
+		neg.setBounds(0,185,50,25);
+		neg.addActionListener(space.action);
+		mlp.add(neg);
+		JButton neu = new JButton("neu");
+		neu.setBounds(0,210,50,25);
+		neu.addActionListener(ctrl0.action);
+		mlp.add(neu);
+		
+		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Digits (1)-(9) set the brush size.";
+		brushRadiusSlider.setToolTipText(sliderHoverText);
+		brushRadiusSlider.setBounds(15,230,20,200);
 
-		//Create a split pane with the two scroll panes in it.
-		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-				controls, mlp);
-		splitPane.setOneTouchExpandable(true);
-		splitPane.setDividerLocation(355);
-
-		//Provide minimum sizes for the two components in the split pane
-		Dimension minimumSize = new Dimension(200, 50);
-		controls.setMinimumSize(minimumSize);
-		mlp.setMinimumSize(minimumSize);
-		add(splitPane, BorderLayout.CENTER);
-		// EAST- nothing
+		//...where initialization occurs:
+		class BrushSliderListener implements ChangeListener {
+			public void stateChanged(ChangeEvent e) {
+				JSlider source = (JSlider)e.getSource();
+				if (!source.getValueIsAdjusting()) {
+					double brushRadius = (double)source.getValue() / 10.0;
+					mlp.brushRadius = brushRadius;
+				}
+			}
+		}
+		brushRadiusSlider.addChangeListener(new BrushSliderListener());
+		mlp.add(brushRadiusSlider);
+		
+		// EAST
+		JPanel settings = getSettings();
+		mlp.add(settings);
+		JButton settingButton = getSettingsButton(settings);
+		mlp.add(settingButton);
 		
 		// SOUTH
 		add(status, BorderLayout.SOUTH);
+	}
+	
+	private JButton getSettingsButton(JPanel settings) {
+		JButton settingButton = new JButton("Settings");
+		settingButton.setBounds(1150,10,100,25);
+		settingButton.addActionListener(new ActionListener () {
+			public void actionPerformed (ActionEvent e) {
+				if (settings.isVisible()) {
+					settings.setVisible(false);
+				} else {
+					settings.setVisible(true);
+				}
+			}
+		});
+		return settingButton;
+	}
+	
+	private JPanel getSettings() {
+		JPanel settings = new JPanel();
+		settings.setLayout(new GridBagLayout());
+		settings.setBounds(945,35,300,100);
+		settings.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		
+		GridBagConstraints c = new GridBagConstraints();
+		c.anchor = GridBagConstraints.NORTHWEST;
+		c.gridx = 0;
+	    c.gridy = 0;
+		settings.add(isPenMode, c);
+		
+	    c.gridy = 1;
+		settings.add(noRelabel, c);
+		
+	    c.gridy = 2;
+		settings.add(new JLabel("      (Unlock labels to edit them.)" + getWidth() ), c);
+		return settings;
 	}
 
 	private Box getControlBox() {
@@ -227,9 +321,6 @@ public class MLPaintApp extends SwingApp {
 		JLabel b1 = new JLabel("       -- \"Avoid these pixels.\"");
 		JLabel b2 = new JLabel("       -- \"Try to avoid pixels like these.\"");
 		JLabel c = new JLabel("  Erase-paint: (Alt or Option + click-and-drag)");
-		
-		// test for JUnit
-		a.setName("test");
 
 		Font font = a.getFont();
 		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
