@@ -461,7 +461,7 @@ public class MLPaintPanel extends JComponent
 		Graphics2D g2 = (Graphics2D) g.create();
 		g2.setColor(getBackground());
 		System.out.print(getBackground());
-		System.out.printf("The JPanel is width x height, %d x %d.",getWidth(), getHeight());
+		System.out.printf("The JPanel is width x height, %d x %d. \n",getWidth(), getHeight());
 		JPanelWidth = getWidth();
 		JPanelHeight = getHeight();
 		g2.fillRect(0, 0, getWidth(), getHeight());// background may have already been filled in
@@ -1070,7 +1070,7 @@ public class MLPaintPanel extends JComponent
 	 * 	Maydo: Do not allow a suggestion outside of view
 	 */
 	private List<MyPoint> getDijkstraSeedPoints() {
-		System.out.printf("Possible seedPoints for Dijkstra is length %,d.",dijkstraPossibleSeeds.size());
+		System.out.printf("Possible seedPoints for Dijkstra is length %,d. /n",dijkstraPossibleSeeds.size());
 
 		List<MyPoint> rr = new ArrayList<MyPoint>();
 		WritableRaster labels0 = labels.getRaster();
