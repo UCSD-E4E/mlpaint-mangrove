@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import org.checkerframework.checker.units.qual.C;
 import org.djf.mlpaint.ImageResamplingDims;
 import org.djf.mlpaint.MyPoint;
+import org.djf.mlpaint.MLPaintPanel;
 
 import static org.djf.util.SwingApp.reportTime;
 
@@ -448,6 +449,17 @@ public class SwingUtil {
 		InputMap inputMap = controls.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
 		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
 		controls.getActionMap().put(textKey, roar);
+	}
+	
+	public static void putActionIntoMLP(MLPaintPanel mlp, String textKey, AbstractAction roar) {
+		InputMap inputMap = mlp.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
+		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
+		mlp.getActionMap().put(textKey, roar);
+	}
+	public static void putActionIntoMLP(MLPaintPanel mlp, char textKey, AbstractAction roar) {
+		InputMap inputMap = mlp.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
+		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
+		mlp.getActionMap().put(textKey, roar);
 	}
 
 

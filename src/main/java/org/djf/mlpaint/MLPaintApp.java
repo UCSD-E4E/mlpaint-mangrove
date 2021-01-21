@@ -8,8 +8,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.Key;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
 import javax.imageio.metadata.IIOMetadata;
@@ -71,6 +74,9 @@ public class MLPaintApp extends SwingApp {
 	private AbstractAction penMode = newAction("Set auto-selection to pen size.", (name,ev) -> makePenMode());
 	private AbstractAction penModeFromBox = newAction("Set to nearly-pen mode (Ctrl-P)|control P", (name,ev) -> makePenModeFromControlBox());
 	private JCheckBox isPenMode = new JCheckBox(penMode);
+	
+	private AbstractAction autoSaveMode = newAction("Turn on auto-save", (name,ev) -> startAutoSave());
+	private JCheckBox isAutoSave = new JCheckBox(autoSaveMode);
 
 	private ActionTracker enter = new ActionTracker("Accept auto-selection as positive (Enter)| ENTER",
 			(name,ev) -> mlp.writeSuggestionToLabels(mlp.POSITIVE)); //MAYDO: UI key choice
@@ -133,6 +139,43 @@ public class MLPaintApp extends SwingApp {
 			"https://www.youtube.com/watch?v=ynDJ86NST30&feature=youtu.be");
 	private SwingLink documentationLink = new SwingLink( "Tutorials: Setup & Labeling Workflow",
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/#tutorial-loading-an-image-to-label");
+	
+	
+	private class AutoSave implements Runnable {
+		private volatile boolean running = true;
+		private int AUTOSAVE_INTERVAL = 5*60; //seconds
+		
+		@Override
+        public void run() {
+			status ("Autosave started with interval %d seconds", AUTOSAVE_INTERVAL);
+    		try {
+    			autoSaveLabels();
+    		} catch (IOException e) {
+    			
+    		}
+        	while (running) {
+        		try {
+        			Thread.sleep(AUTOSAVE_INTERVAL * 1000);
+        		} catch (InterruptedException e) {
+        			return;
+        		}
+        		try {
+        			autoSaveLabels();
+        		} catch (IOException e) {
+        			
+        		}
+        	}
+
+        }
+        
+        public void terminate() {
+        	running = false;
+        }
+	}
+
+	private Thread thread = null;
+	private AutoSave autoSave = null;
+
 
 	/*main passes this function into the EDT TODO: check that*/
 	// changed from private
@@ -155,6 +198,7 @@ public class MLPaintApp extends SwingApp {
 				//
 			}
 		}
+   
 
 	}
 
@@ -185,41 +229,36 @@ public class MLPaintApp extends SwingApp {
 //		mlp.setMinimumSize(minimumSize);
 //		add(splitPane, BorderLayout.CENTER);
 		
+		SwingUtil.putActionIntoMLP(mlp, digitOne.keyStroke, digitOne.action);
+//		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
+//		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
+		SwingUtil.putActionIntoMLP(mlp, digitFour.keyStroke, digitFour.action);
+//		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
+//		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
+//		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
+//		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
+		SwingUtil.putActionIntoMLP(mlp, digitNine.keyStroke, digitNine.action);
+
+		SwingUtil.putActionIntoMLP(mlp, up.keyStroke, up.action);
+		SwingUtil.putActionIntoMLP(mlp, down.keyStroke, down.action);
+
+		SwingUtil.putActionIntoMLP(mlp, plus.keyStroke, plus.action);
+		SwingUtil.putActionIntoMLP(mlp, minus.keyStroke, minus.action);
+		
 		//WEST
-		JButton grow = new JButton("grow select");
-		grow.setBounds(0,10,110,25);
-		grow.addActionListener(right.action);
-		mlp.add(grow);
+		right.addAsButton(mlp, "grow select", 0,10,110,25);
 		
-		JButton shrink = new JButton("shrink select");
-		shrink.setBounds(0,35,110,25);
-		shrink.addActionListener(left.action);
-		mlp.add(shrink);
+		left.addAsButton(mlp, "shrink select", 0,35,110,25);
 		
-		JButton select = new JButton("undo select");
-		select.setBounds(0,60,110,25);
-		select.addActionListener(delete.action);
-		mlp.add(select);
+		delete.addAsButton(mlp, "undo select", 0,60,110,25);
 		
+		undo.addAsButton(mlp, "undo label", 0,110,110,25);
 		
-		JButton label = new JButton("undo label");
-		label.setBounds(0,110,110,25);
-		label.addActionListener(undo.action);
-		mlp.add(label);
+		enter.addAsButton(mlp, "+", 0,160,50,25);
+	
+		space.addAsButton(mlp, "-", 0,185,50,25);
 		
-		
-		JButton pos = new JButton("pos");
-		pos.setBounds(0,160,50,25);
-		pos.addActionListener(enter.action);
-		mlp.add(pos);
-		JButton neg = new JButton("neg");
-		neg.setBounds(0,185,50,25);
-		neg.addActionListener(space.action);
-		mlp.add(neg);
-		JButton neu = new JButton("neu");
-		neu.setBounds(0,210,50,25);
-		neu.addActionListener(ctrl0.action);
-		mlp.add(neu);
+		ctrl0.addAsButton(mlp, "neu", 0,210,50,25);
 		
 		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Digits (1)-(9) set the brush size.";
 		brushRadiusSlider.setToolTipText(sliderHoverText);
@@ -280,6 +319,10 @@ public class MLPaintApp extends SwingApp {
 		
 	    c.gridy = 2;
 		settings.add(new JLabel("      (Unlock labels to edit them.)" + getWidth() ), c);
+		
+		c.gridy = 3;
+		settings.add(isAutoSave, c);
+		
 		return settings;
 	}
 
@@ -498,6 +541,20 @@ public class MLPaintApp extends SwingApp {
 		isPenMode.setSelected(!isPenMode.isSelected());
 		makePenMode();
 	}
+	
+	private void startAutoSave() {
+		if (isAutoSave.isSelected() == true) {
+			autoSave = new AutoSave();
+			thread = new Thread(autoSave);
+			thread.start();
+		} else {
+			if (thread != null) {
+				autoSave.terminate();
+				thread.interrupt();
+				status("Autosave stopped ");
+			}
+		}
+	}
 
 	/** Make the menus, with associated actions and often keyboard shortcuts.
 	 * @return JMenuBar
@@ -652,7 +709,7 @@ public class MLPaintApp extends SwingApp {
 		mlp.revalidate();// https://docs.oracle.com/javase/8/docs/api/javax/swing/JComponent.html#revalidate--
 		status("Opened %s  %,d x %,d       %s", currentImageFile, image.getWidth(), image.getHeight(),
 				image.getColorModel().toString());
-		System.out.printf("image color model: %s", image.getColorModel().toString());
+		System.out.printf("image color model: %s \n", image.getColorModel().toString());
 	}
 
 	private void saveLabels(String command, ActionEvent ev) throws IOException {
@@ -664,7 +721,7 @@ public class MLPaintApp extends SwingApp {
 		
 		// if no image, return
 		if (currentImageFile == null) return;
-		
+		 
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
 		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + extension;
@@ -675,6 +732,29 @@ public class MLPaintApp extends SwingApp {
 		BufferedImage labelsToScale = SwingUtil.upsampleImage0Channel(mlp.labels, xy.bigDim, xy.samplingEdge);
 		boolean a = ImageIO.write(labelsToScale, formatName, outfile.toFile());
 		status("Saved %d x %d labels to %s, with message %s", labelsToScale.getWidth(), labelsToScale.getHeight(), outfile, a);
+		mlp.safeToSave = true;
+		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
+	}
+	
+	private void autoSaveLabels() throws IOException {
+		//TODO  figure out exactly how to output for downstream consumption
+		// For now: compressed TIFF is good
+		
+		// if no image, return
+		if (currentImageFile == null) return;
+		
+		SimpleDateFormat formatter = new SimpleDateFormat("_dd-MM-yyyy_HH.mm.ss");  
+		Date date = new Date();  
+		String extension = ".tif"; //".tif"".png";
+		String formatName = "tiff"; //"tiff" "png";
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + formatter.format(date) + extension;
+		Path outfile = directory.resolve(filename);
+		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
+		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
+		//  It seems that  4-bit image rather than 8-bit allows for double the image size, 2^32, or 65,500^2.
+		BufferedImage labelsToScale = SwingUtil.upsampleImage0Channel(mlp.labels, xy.bigDim, xy.samplingEdge);
+		boolean a = ImageIO.write(labelsToScale, formatName, outfile.toFile());
+		status("Saved %d x %d labels to %s, with message %s at %s", labelsToScale.getWidth(), labelsToScale.getHeight(), outfile, a, date);
 		mlp.safeToSave = true;
 		//https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/imageio/metadata/IIOMetadata.html
 	}

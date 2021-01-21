@@ -47,6 +47,20 @@ public class ActionTracker {
 
 		SwingUtil.putActionIntoBox(controls, keyStroke, this.action);
 	}
+	
+	public void addAsButton(MLPaintPanel mlp, String text, int x, int y, int w, int h) {
+		String keyStroke = this.keyStroke;
+
+		JButton button = new JButton( text );
+		button.addActionListener( this.action);
+		button.setFocusable(false);
+		button.setBounds(x,y,w,h);
+		//button.setBorder( new LineBorder(Color.BLACK) );
+		//button.setPreferredSize( new Dimension(250, 10) );
+		mlp.add( button );
+
+		SwingUtil.putActionIntoMLP(mlp, keyStroke, this.action);
+	}
 
 	/** Add a JCheckBox with key-trigger to a Box.
 	 * https://stackoverflow.com/a/33739732/13773745*/
@@ -60,6 +74,7 @@ public class ActionTracker {
 		//button.setPreferredSize( new Dimension(250, 10) );
 		controls.add( checkBox );
 	}
+	
 
 
 	//FROM SwingApp.java:
