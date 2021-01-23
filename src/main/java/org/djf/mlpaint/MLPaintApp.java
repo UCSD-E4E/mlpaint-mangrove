@@ -230,13 +230,13 @@ public class MLPaintApp extends SwingApp {
 //		add(splitPane, BorderLayout.CENTER);
 		
 		SwingUtil.putActionIntoMLP(mlp, digitOne.keyStroke, digitOne.action);
-//		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
-//		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitTwo.keyStroke, digitTwo.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitThree.keyStroke, digitThree.action);
 		SwingUtil.putActionIntoMLP(mlp, digitFour.keyStroke, digitFour.action);
-//		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
-//		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
-//		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
-//		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitFive.keyStroke, digitFive.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitSix.keyStroke, digitSix.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitSeven.keyStroke, digitSeven.action);
+//		SwingUtil.putActionIntoMLP(mlp, digitEight.keyStroke, digitEight.action);
 		SwingUtil.putActionIntoMLP(mlp, digitNine.keyStroke, digitNine.action);
 
 		SwingUtil.putActionIntoMLP(mlp, up.keyStroke, up.action);
@@ -246,13 +246,13 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoMLP(mlp, minus.keyStroke, minus.action);
 		
 		//WEST
-		right.addAsButton(mlp, "grow select", 0,10,110,25);
+		right.addAsButton(mlp, "Grow select", 0,10,110,25);
 		
-		left.addAsButton(mlp, "shrink select", 0,35,110,25);
+		left.addAsButton(mlp, "Shrink select", 0,35,110,25);
 		
-		delete.addAsButton(mlp, "undo select", 0,60,110,25);
+		delete.addAsButton(mlp, "Undo select", 0,60,110,25);
 		
-		undo.addAsButton(mlp, "undo label", 0,110,110,25);
+		undo.addAsButton(mlp, "Undo label", 0,110,110,25);
 		
 		enter.addAsButton(mlp, "+", 0,160,50,25);
 	
@@ -260,9 +260,13 @@ public class MLPaintApp extends SwingApp {
 		
 		ctrl0.addAsButton(mlp, "neu", 0,210,50,25);
 		
-		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Digits (1)-(9) set the brush size.";
+		JLabel brushSize = new JLabel("<html><div style='text-align: center;'>Brush<br/>size</div></html>");
+		brushSize.setBounds(10, 250, 50, 30);
+		mlp.add(brushSize);
+		
+		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Keys (D), (F), (G) set the brush size.";
 		brushRadiusSlider.setToolTipText(sliderHoverText);
-		brushRadiusSlider.setBounds(15,230,20,200);
+		brushRadiusSlider.setBounds(15,270,20,200);
 
 		//...where initialization occurs:
 		class BrushSliderListener implements ChangeListener {

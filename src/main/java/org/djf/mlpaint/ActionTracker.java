@@ -49,12 +49,14 @@ public class ActionTracker {
 	}
 	
 	public void addAsButton(MLPaintPanel mlp, String text, int x, int y, int w, int h) {
+		String hovertext = this.name;
 		String keyStroke = this.keyStroke;
 
 		JButton button = new JButton( text );
 		button.addActionListener( this.action);
 		button.setFocusable(false);
 		button.setBounds(x,y,w,h);
+		button.setToolTipText(hovertext);
 		//button.setBorder( new LineBorder(Color.BLACK) );
 		//button.setPreferredSize( new Dimension(250, 10) );
 		mlp.add( button );
