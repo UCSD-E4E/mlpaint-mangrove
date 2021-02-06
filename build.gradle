@@ -64,11 +64,14 @@ dependencies {
     implementation 'org.assertj:assertj-swing:3.9.2'
     implementation 'org.assertj:assertj-swing-junit:3.9.2'
     
+    // https://mvnrepository.com/artifact/org.yaml/snakeyaml
+	compile group: 'org.yaml', name: 'snakeyaml', version: '1.27'
+    
 }
 //apply plugin: 'org.openjfx.javafxplugin'
 
 
-test {
-    useJUnit()
-}
+// test {
+//     useJUnit()
+// }
 
