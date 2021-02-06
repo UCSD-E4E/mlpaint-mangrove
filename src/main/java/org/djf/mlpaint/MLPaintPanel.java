@@ -150,10 +150,13 @@ public class MLPaintPanel extends JComponent
 	public boolean showClassifierC = false;
 	/** classifier output image, grayscale */
 	public BufferedImage classifierOutput; //GROK: Why was this made private?
+	
+	private int AUTOSAVE_INTERVAL = 5*60; //seconds
 
 
 	public MLPaintPanel() {
 		super();
+		setLayout(new GridBagLayout());
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
@@ -161,6 +164,14 @@ public class MLPaintPanel extends JComponent
 		setOpaque(true);
 		setFocusable(true);// allow key events
 //JAR		showClassifier.addListener(event -> repaint());
+	}
+	
+	public void setAutosave(int num) {
+		AUTOSAVE_INTERVAL = num;
+	}
+	
+	public int getAutosave() {
+		return AUTOSAVE_INTERVAL;
 	}
 
 	public void resetData(BufferedImage masterImage, BufferedImage labels2,

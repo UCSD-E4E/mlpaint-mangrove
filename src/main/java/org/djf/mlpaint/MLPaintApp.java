@@ -5,13 +5,18 @@ import java.awt.event.*;
 import java.awt.font.TextAttribute;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.Key;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
@@ -27,6 +32,8 @@ import com.google.common.io.MoreFiles;
 import org.djf.util.SwingUtil;
 
 import static org.djf.util.SwingUtil.setRGBNoAlpha;
+
+import org.yaml.snakeyaml.Yaml;
 
 /** Magic Label Paint ~ ML Paint
  *  	A GUI for assisted labeling, using interactive machine learning suggestions
@@ -140,14 +147,14 @@ public class MLPaintApp extends SwingApp {
 	private SwingLink documentationLink = new SwingLink( "Tutorials: Setup & Labeling Workflow",
 			"https://ucsd-e4e.github.io/mangrove/Labeling%20Tool/#tutorial-loading-an-image-to-label");
 	
+//	private long AUTOSAVE_INTERVAL = 5*60; //seconds
 	
 	private class AutoSave implements Runnable {
 		private volatile boolean running = true;
-		private int AUTOSAVE_INTERVAL = 5*60; //seconds
 		
 		@Override
         public void run() {
-			status ("Autosave started with interval %d seconds", AUTOSAVE_INTERVAL);
+			status ("Autosave started with interval %d seconds", mlp.getAutosave());
     		try {
     			autoSaveLabels();
     		} catch (IOException e) {
@@ -155,7 +162,7 @@ public class MLPaintApp extends SwingApp {
     		}
         	while (running) {
         		try {
-        			Thread.sleep(AUTOSAVE_INTERVAL * 1000);
+        			Thread.sleep(mlp.getAutosave() * 1000);
         		} catch (InterruptedException e) {
         			return;
         		}
@@ -198,6 +205,33 @@ public class MLPaintApp extends SwingApp {
 				//
 			}
 		}
+		
+	    Map conf = new HashMap();
+	    Yaml yaml = new Yaml();
+	    File confPath = new File("config.yml");
+	    
+	    try {
+	        InputStream stream = new FileInputStream(confPath);
+	        
+	        conf = (Map) yaml.load(stream);
+	        if (conf == null || conf.isEmpty() == true) {
+	            throw new RuntimeException("Failed to read config file");
+	        }
+	        status("%s", "Reading config file");
+	        try {
+		        mlp.setAutosave((int) conf.get("autosave"));
+		        status("%s", "Setting autosave config");
+	        } catch (Exception e) {
+	        	throw new RuntimeException("autosave not found");
+	        }
+	        
+	    } catch (FileNotFoundException e) {
+	        System.out.println("No such file " + confPath);
+	        throw new RuntimeException("No config file");
+	    } catch (Exception e1) {
+	        e1.printStackTrace();
+	        throw new RuntimeException("Failed to read config file");
+	    }
    
 
 	}
@@ -206,6 +240,8 @@ public class MLPaintApp extends SwingApp {
 	 * So far controls on the west and little else.
 	 */
 	private void makeContent() {
+
+	    
 		// NORTH- nothing
 
 
@@ -246,27 +282,47 @@ public class MLPaintApp extends SwingApp {
 		SwingUtil.putActionIntoMLP(mlp, minus.keyStroke, minus.action);
 		
 		//WEST
-		right.addAsButton(mlp, "Grow select", 0,10,110,25);
+		GridBagConstraints c = new GridBagConstraints();
+		c.anchor = GridBagConstraints.NORTHWEST;
+		c.weightx = 1;
+		c.weighty = 1;
+		c.gridx = 0;
+	    c.gridy = 0;
+	    
+		right.addAsButton(mlp, "Grow select", 0,10,110,25, c);
+		c.gridy = 1;
+		left.addAsButton(mlp, "Shrink select", 0,35,110,25, c);
+		c.gridy = 2;
+		delete.addAsButton(mlp, "Undo select", 0,60,110,25, c);
 		
-		left.addAsButton(mlp, "Shrink select", 0,35,110,25);
+		c.gridy = 3;
+		mlp.add(new JLabel(" "), c);
 		
-		delete.addAsButton(mlp, "Undo select", 0,60,110,25);
+		JLabel label = new JLabel("<html><div style='text-align: center;'>&nbsp;&nbsp;Label</div></html>");
+		label.setBounds(10, 95, 50, 30);
+		c.gridy = 4;
+		mlp.add(label, c);
 		
-		undo.addAsButton(mlp, "Undo label", 0,110,110,25);
+		c.gridy = 5;
+		enter.addAsButton(mlp, "+", 0,120,50,25, c);
+		c.gridy = 6;
+		space.addAsButton(mlp, "-", 0,145,50,25, c);
+		c.gridy = 7;
+		ctrl0.addAsButton(mlp, "neu", 0,170,50,25, c);
+		c.gridy = 8;
+		undo.addAsButton(mlp, "Undo label", 0,195,100,25, c);
 		
-		enter.addAsButton(mlp, "+", 0,160,50,25);
-	
-		space.addAsButton(mlp, "-", 0,185,50,25);
+		c.gridy = 9;
+		mlp.add(new JLabel(" "), c);
 		
-		ctrl0.addAsButton(mlp, "neu", 0,210,50,25);
-		
-		JLabel brushSize = new JLabel("<html><div style='text-align: center;'>Brush<br/>size</div></html>");
-		brushSize.setBounds(10, 250, 50, 30);
-		mlp.add(brushSize);
+		JLabel brushSize = new JLabel("<html><div style='text-align: center;'>&nbsp;Brush<br/>&nbsp;&nbsp;size</div></html>");
+		brushSize.setBounds(10, 240, 50, 30);
+		c.gridy = 10;
+		mlp.add(brushSize, c);
 		
 		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Keys (D), (F), (G) set the brush size.";
 		brushRadiusSlider.setToolTipText(sliderHoverText);
-		brushRadiusSlider.setBounds(15,270,20,200);
+		brushRadiusSlider.setBounds(15,260,20,200);
 
 		//...where initialization occurs:
 		class BrushSliderListener implements ChangeListener {
@@ -279,13 +335,45 @@ public class MLPaintApp extends SwingApp {
 			}
 		}
 		brushRadiusSlider.addChangeListener(new BrushSliderListener());
-		mlp.add(brushRadiusSlider);
+		c.gridy = 11;
+		c.ipady = 200;
+		mlp.add(brushRadiusSlider, c);
+		c.gridy = 12;
+		mlp.add(new JLabel(" "), c);
 		
 		// EAST
+		c.anchor = GridBagConstraints.NORTHEAST;
 		JPanel settings = getSettings();
-		mlp.add(settings);
+		c.gridx = 1;
+		c.gridy = 2;
+		c.ipadx = 3;
+		c.ipady = 0;
+		c.gridheight = 6;
+		c.gridwidth = 2;
+		c.fill = GridBagConstraints.VERTICAL;
+		mlp.add(settings, c);
 		JButton settingButton = getSettingsButton(settings);
-		mlp.add(settingButton);
+		c.fill = GridBagConstraints.NONE;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.gridheight = 0;
+		c.gridwidth = 0;
+		mlp.add(settingButton, c);
+		
+		JPanel help = getHelp();
+		c.gridx = 1;
+		c.gridy = 8;
+		c.gridheight = 20;
+		c.gridwidth = 2;
+		c.fill = GridBagConstraints.VERTICAL;
+		mlp.add(help, c);
+		JButton helpButton = getHelpButton(help);
+		c.fill = GridBagConstraints.NONE;
+		c.gridx = 0;
+		c.gridy = 1;
+		c.gridheight = 0;
+		c.gridwidth = 0;
+		mlp.add(helpButton, c);
 		
 		// SOUTH
 		add(status, BorderLayout.SOUTH);
@@ -309,7 +397,7 @@ public class MLPaintApp extends SwingApp {
 	private JPanel getSettings() {
 		JPanel settings = new JPanel();
 		settings.setLayout(new GridBagLayout());
-		settings.setBounds(945,35,300,100);
+		settings.setBounds(945,35,300,130);
 		settings.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		
 		GridBagConstraints c = new GridBagConstraints();
@@ -322,157 +410,118 @@ public class MLPaintApp extends SwingApp {
 		settings.add(noRelabel, c);
 		
 	    c.gridy = 2;
-		settings.add(new JLabel("      (Unlock labels to edit them.)" + getWidth() ), c);
+		settings.add(new JLabel("      (Unlock labels to edit them.)                     " ), c);
 		
 		c.gridy = 3;
 		settings.add(isAutoSave, c);
 		
+		c.gridy = 4;
+		save.addAsButton(settings, c);
+		
 		return settings;
 	}
+	
+	private JButton getHelpButton(JPanel help) {
+		JButton helpButton = new JButton("Help");
+		helpButton.setBounds(1060,10,100,25);
+		helpButton.addActionListener(new ActionListener () {
+			public void actionPerformed (ActionEvent e) {
+				if (help.isVisible()) {
+					help.setVisible(false);
+				} else {
+					help.setVisible(true);
+				}
+			}
+		});
+		return helpButton;
+	}
+	
+	private JPanel getHelp() {
+		JPanel help = new JPanel();
+		help.setLayout(new GridBagLayout());
+		help.setBounds(945,170,300,500);
+		help.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		
+		GridBagConstraints c = new GridBagConstraints();
+		c.anchor = GridBagConstraints.NORTHWEST;
+		c.insets = new Insets(2,2,2,2);
+		c.gridx = 1;
+	    c.gridy = 0;
+		help.add(documentationLink, c);
+		
+	    c.gridy = 1;
+	    JLabel h = new JLabel("Hover over buttons for info/shortcuts");
+	    Font font = h.getFont();
+	    h.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+	    help.add(h, c);
+	    
+	    c.gridy = 2;
+		help.add(new JLabel("1. Choose a region to label."), c);
+		
+	    c.gridy = 3;
 
-	private Box getControlBox() {
-//		JButton b0 = new JButton("Weight \ndistance \n more \nin suggestion");
-//		JButton b1 = new JButton("Weight \nclassifier \n more \nin suggestion");
-//		b0.addActionListener(ev -> adjustPower(-0.25));
-//		b1.addActionListener(ev -> adjustPower(0.25));
-//		b0.setFocusable(false);
-//		b1.setFocusable(false);//https://stackoverflow.com/questions/4472530/disabling-space-bar-triggering-click-for-jbutton
-//
-//		controls.add(b1);
-//		controls.add(b0);
-//		add(controls, BorderLayout.WEST);  							// JFrame method, add(child)
-//
-
-		Box controls = Box.createVerticalBox();
-		controls.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-//		controls.add(new JSeparator());
-//		controls.add(new JLabel("Setup:"));
-//		controls.add(setupLink);
-//
-//		controls.add(new JSeparator());
-//		controls.add(new JLabel("Workflow:"));
-//		controls.add(workflowLink);
-		controls.add(documentationLink);
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("1. Choose a region to label."));
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("2. Brush on select-paint and avoid-paint."));
+		help.add(new JLabel("2. Brush on select-paint and avoid-paint."), c);
+		
+	    c.gridy = 4;
 
 		JLabel a = new JLabel("  Select-paint: (click-and-drag)");
 		JLabel a1 = new JLabel("       -- \"Select these pixels.\"");
 		JLabel a2 = new JLabel("       -- \"Try to select pixels like these.\"");
-		JLabel b = new JLabel("  Avoid-paint: (Shift + click-and-drag)");
+		JLabel b = new JLabel("  Avoid-paint: (Shift + click+drag)");
 		JLabel b1 = new JLabel("       -- \"Avoid these pixels.\"");
 		JLabel b2 = new JLabel("       -- \"Try to avoid pixels like these.\"");
-		JLabel c = new JLabel("  Erase-paint: (Alt or Option + click-and-drag)");
-
-		Font font = a.getFont();
+		JLabel c1 = new JLabel("  Erase-paint: (Alt or Option + click+drag)");
+		
 		a.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
 		b.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
+		c1.setFont(new Font(font.getFontName(), Font.BOLD, font.getSize()));
 
 		//controls.add(new JLabel("  "));
-		controls.add(a); controls.add(a1); controls.add(a2);
-		controls.add(b);
-		controls.add(b1);
-		controls.add(b2);
-		controls.add(c);
-		//up.addAsButton(controls);
-		//down.addAsButton(controls);
+		help.add(a, c); 
+	    c.gridy = 5;
+		help.add(a1, c);
+	    c.gridy = 6;
+		help.add(a2, c);
+	    c.gridy = 7;
+		help.add(b, c);
+	    c.gridy = 8;
+		help.add(b1, c);
+	    c.gridy = 9;
+		help.add(b2, c);
+	    c.gridy = 10;
+		help.add(c1, c);
+	    c.gridy = 11;
+		
+		help.add(new JLabel("3. Resize the auto-selection."), c);
+	    c.gridy = 12;
+	    help.add(new JLabel("     Grow/Shrink buttons"), c);
+	    c.gridy = 13;
+	    help.add(new JLabel("     (X)/(Z) shortcuts"), c);
+	    c.gridy = 14;
+		help.add(new JLabel("4. Label the auto-selection."), c);
+	    c.gridy = 15;
+	    help.add(new JLabel("     +/-/neu buttons"), c);
+	    c.gridy = 16;
+	    help.add(new JLabel("     (Enter)/(Space)/(Ctrl-U) shortcuts"), c);
 
-		String sliderHoverText = "Keys (A) and (S) shrink and grow the brush size.  Digits (1)-(9) set the brush size.";
-		brushRadiusSlider.setToolTipText(sliderHoverText);
-
-		//...where initialization occurs:
-		class BrushSliderListener implements ChangeListener {
-			public void stateChanged(ChangeEvent e) {
-				JSlider source = (JSlider)e.getSource();
-				if (!source.getValueIsAdjusting()) {
-					double brushRadius = (double)source.getValue() / 10.0;
-					mlp.brushRadius = brushRadius;
-				}
-			}
-		}
-		brushRadiusSlider.addChangeListener(new BrushSliderListener());
-
-		SwingUtil.putActionIntoBox(controls, digitOne.keyStroke, digitOne.action);
-//		SwingUtil.putActionIntoBox(controls, digitTwo.keyStroke, digitTwo.action);
-//		SwingUtil.putActionIntoBox(controls, digitThree.keyStroke, digitThree.action);
-		SwingUtil.putActionIntoBox(controls, digitFour.keyStroke, digitFour.action);
-//		SwingUtil.putActionIntoBox(controls, digitFive.keyStroke, digitFive.action);
-//		SwingUtil.putActionIntoBox(controls, digitSix.keyStroke, digitSix.action);
-//		SwingUtil.putActionIntoBox(controls, digitSeven.keyStroke, digitSeven.action);
-//		SwingUtil.putActionIntoBox(controls, digitEight.keyStroke, digitEight.action);
-		SwingUtil.putActionIntoBox(controls, digitNine.keyStroke, digitNine.action);
-
-		SwingUtil.putActionIntoBox(controls, up.keyStroke, up.action);
-		SwingUtil.putActionIntoBox(controls, down.keyStroke, down.action);
-
-		SwingUtil.putActionIntoBox(controls, plus.keyStroke, plus.action);
-		SwingUtil.putActionIntoBox(controls, minus.keyStroke, minus.action);
-
-		controls.add(new JLabel("  "));
-		JLabel sliderText = new JLabel("Brush size--Shrink & grow (A)&(S)--Set (D)&(F)");
-		sliderText.setToolTipText(sliderHoverText);
-		controls.add(sliderText);
-		controls.add(brushRadiusSlider);
-		//controls.add(new JLabel("Shrink & grow brush size: (A) & (S)"));
-		//controls.add(new JLabel("Set brush size: digits (1)-(9)"));
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("3. Resize the auto-selection."));
-
-		right.addAsButton(controls);
-		left.addAsButton(controls);
-		controls.add(isPenMode);
-		//SwingUtil.putActionIntoBox(controls, "penModeFromBoxCode", penModeFromBox);
-
-//		final JCheckBox checkBox5 = new JCheckBox("Racing");
-//		checkBox5.setMnemonic(KeyEvent.VK_P);
-//		checkBox5.addItemListener(new ItemListener() {
-//			public void itemStateChanged(ItemEvent e) {
-//				System.out.println("WE are calling somethin.");
-//				makePenMode();
-//			}
-//		});
-//		controls.add(checkBox5);
-
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("4. Label the auto-selection."));
-
-		enter.addAsButton(controls);
-		space.addAsButton(controls);
-		ctrl0.addAsButton(controls);
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("5. Move to the next spot."));
-		controls.add(new JLabel("     Pan (Ctrl + click-and-drag)"));
-		controls.add(new JLabel("               (Or middle mouse button drag)"));
-		controls.add(new JLabel("     Zoom (Two-finger scroll)  --Not pinch"));
-		controls.add(new JSeparator());
-
-		controls.add(new JLabel("Deal with mistakes:"));
-		delete.addAsButton(controls);
-		undo.addAsButton(controls);
-		//noRelabel.setMnemonic(KeyEvent.VK_C);
-		controls.add(new JLabel("  "));
-		controls.add(noRelabel);
-		controls.add(new JLabel("      (Unlock labels to edit them.)"));
-		//SwingUtil.putActionIntoBox(controls, "lockFromBoxCode", lockFromBox);
-		controls.add(new JSeparator());
-		controls.add(new JLabel("And the surest recovery method:"));
-		save.addAsButton(controls);
-		controls.add(new JSeparator());
-
-		return controls;
+		
+	    c.gridy = 17;
+		help.add(new JLabel("5. Move to the next spot."), c);
+	    c.gridy = 18;
+		help.add(new JLabel("     Pan (Ctrl + click+drag)"), c);
+	    c.gridy = 19;
+		help.add(new JLabel("               (Or middle mouse button drag)"), c);
+	    c.gridy = 20;
+		help.add(new JLabel("     Zoom (Two-finger scroll)  --Not pinch"), c);
+	    c.gridy = 21;
+		help.add(new JLabel("Deal with mistakes:"), c);
+		c.gridy = 22;
+		help.add(new JLabel("     Undo select/Undo label buttons"), c);
+		c.gridy = 23;
+		help.add(new JLabel("     (Backspace)/(Ctrl-Z) shortcuts"), c);
+		
+		return help;
 	}
-
-
-
-
 
 	private void adjustPower(double v) {
 		mlp.scorePower += v;
@@ -728,7 +777,7 @@ public class MLPaintApp extends SwingApp {
 		 
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + extension;
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintlabels" + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
 		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
@@ -751,7 +800,7 @@ public class MLPaintApp extends SwingApp {
 		Date date = new Date();  
 		String extension = ".tif"; //".tif"".png";
 		String formatName = "tiff"; //"tiff" "png";
-		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintLabels" + formatter.format(date) + extension;
+		String filename = MoreFiles.getNameWithoutExtension(currentImageFile) + "_MLPaintlabels" + formatter.format(date) + extension;
 		Path outfile = directory.resolve(filename);
 		// There is a 2^31 limit on the number of pixels in an image, a limit divided by four for RGBA.
 		// It makes sense that an 8-bit grayscale as opposed to a RGBA 32-bit image allows 4x the image size, full 2^31.
