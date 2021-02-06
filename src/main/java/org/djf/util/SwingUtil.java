@@ -451,6 +451,12 @@ public class SwingUtil {
 		controls.getActionMap().put(textKey, roar);
 	}
 	
+	public static void putActionIntoPanel(JPanel controls, String textKey, AbstractAction roar) {
+		InputMap inputMap = controls.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
+		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
+		controls.getActionMap().put(textKey, roar);
+	}
+	
 	public static void putActionIntoMLP(MLPaintPanel mlp, String textKey, AbstractAction roar) {
 		InputMap inputMap = mlp.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW);
 		inputMap.put(KeyStroke.getKeyStroke(textKey), textKey);
